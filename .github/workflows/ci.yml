@@ -4,7 +4,6 @@ name: CI
   push:
     branches:
       - main
-      - axiom-rust-rebuild
   pull_request:
 
 permissions:
