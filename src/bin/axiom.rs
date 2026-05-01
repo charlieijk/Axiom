@@ -5,6 +5,7 @@ use axiom::{
     fitness::evaluate,
     policy::ControllerKind,
     rng::Rng,
+    web::{GuiConfig, gui_smoke_check, serve_gui},
 };
 
 fn main() {
@@ -14,6 +15,7 @@ fn main() {
         Some("evaluate") => evaluate_once(args.next().as_deref()),
         Some("evolve") => evolve(args.collect()),
         Some("animate") | Some("replay") => animate(args.collect()),
+        Some("gui") | Some("serve") => gui(args.collect()),
         Some("help") | Some("--help") | Some("-h") | None => print_help(),
         Some(command) => {
             eprintln!("unknown command: {command}");
@@ -167,6 +169,41 @@ fn animate(args: Vec<String>) {
     }
 }
 
+fn gui(args: Vec<String>) {
+    let mut config = GuiConfig::default();
+    let mut index = 0;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--host" => {
+                config.host = parse_next(&args, &mut index, "host");
+            }
+            "--port" | "-p" => {
+                config.port = parse_next(&args, &mut index, "port");
+            }
+            "--check" => {
+                config.check = true;
+            }
+            other => {
+                eprintln!("unknown gui option: {other}");
+                std::process::exit(2);
+            }
+        }
+        index += 1;
+    }
+
+    let result = if config.check {
+        gui_smoke_check().map(|_| ())
+    } else {
+        serve_gui(config).map(|_| ())
+    };
+
+    if let Err(error) = result {
+        eprintln!("gui failed: {error}");
+        std::process::exit(1);
+    }
+}
+
 fn parse_next<T: std::str::FromStr>(args: &[String], index: &mut usize, label: &str) -> T {
     *index += 1;
     args.get(*index)
@@ -206,6 +243,7 @@ fn print_help() {
            axiom demo\n\
            axiom evaluate [feedforward|recurrent|cpg]\n\
            axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
+           axiom gui [--host HOST] [--port PORT]\n\
            axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n"
     );
 }

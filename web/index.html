@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Axiom Creature Simulator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="simulator-shell">
+      <section class="viewport-panel" aria-label="Creature simulator viewport">
+        <canvas id="simulator" width="1280" height="760"></canvas>
+        <div class="hud">
+          <div>
+            <span class="metric-label">Time</span>
+            <strong id="metric-time">0.00s</strong>
+          </div>
+          <div>
+            <span class="metric-label">Distance</span>
+            <strong id="metric-distance">0.00</strong>
+          </div>
+          <div>
+            <span class="metric-label">Tilt</span>
+            <strong id="metric-tilt">0.00</strong>
+          </div>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="Simulation controls">
+        <header class="brand-row">
+          <div class="mark" aria-hidden="true"></div>
+          <div>
+            <h1>Axiom</h1>
+            <p>Creature Simulator</p>
+          </div>
+        </header>
+
+        <div class="control-grid">
+          <label>
+            Controller
+            <select id="controller">
+              <option value="cpg">CPG</option>
+              <option value="feedforward">Feedforward</option>
+              <option value="recurrent">Recurrent</option>
+            </select>
+          </label>
+
+          <label>
+            Terrain
+            <select id="task">
+              <option value="rough">Rough</option>
+              <option value="flat">Flat</option>
+              <option value="recovery">Recovery</option>
+            </select>
+          </label>
+
+          <label>
+            Seed
+            <input id="seed" type="number" min="1" step="1" value="19" />
+          </label>
+
+          <label>
+            Frames
+            <input id="frames" type="number" min="30" max="900" step="10" value="260" />
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="generate" type="button">Generate</button>
+          <button id="play" type="button">Pause</button>
+          <button id="restart" type="button">Restart</button>
+        </div>
+
+        <label class="range-row">
+          Speed
+          <input id="speed" type="range" min="0.25" max="3" value="1" step="0.25" />
+          <output id="speed-value">1.00x</output>
+        </label>
+
+        <label class="range-row">
+          Replay
+          <input id="scrubber" type="range" min="0" max="1" value="0" step="1" />
+          <output id="frame-value">0</output>
+        </label>
+
+        <div class="status-grid" aria-label="Replay status">
+          <div>
+            <span>Body</span>
+            <strong id="body-count">0</strong>
+          </div>
+          <div>
+            <span>Joints</span>
+            <strong id="joint-count">0</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong id="status">Loading</strong>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -18,6 +18,7 @@ This rebuild is scoped from the previous Axiom review thread:
 ```sh
 cargo test --workspace
 cargo run -- demo
+cargo run -- gui
 cargo run -- animate cpg
 cargo run -- evaluate cpg
 cargo run -- evolve --generations 10 --population 32 --steps 180
@@ -43,4 +44,11 @@ The `animate` command provides a terminal replay renderer over the same simulati
 ```sh
 cargo run -- animate cpg --task rough --frames 160 --fps 20
 cargo run -- animate feedforward --task flat --frames 80 --fps 30
+```
+
+The `gui` command starts a local browser interface backed by Rust replay data:
+
+```sh
+cargo run -- gui
+open http://127.0.0.1:8787
 ```
