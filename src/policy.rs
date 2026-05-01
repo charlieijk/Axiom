@@ -1,0 +1,110 @@
+use crate::genome::Genome;
+use crate::network::CompiledNetwork;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ControllerKind {
+    FeedForward,
+    Recurrent,
+    Cpg,
+}
+
+impl ControllerKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::FeedForward => "feedforward",
+            Self::Recurrent => "recurrent",
+            Self::Cpg => "cpg",
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BrainState {
+    pub recurrent: Vec<f32>,
+    pub oscillator_phase: f32,
+}
+
+impl BrainState {
+    pub fn new(output_count: usize) -> Self {
+        Self {
+            recurrent: vec![0.0; output_count],
+            oscillator_phase: 0.0,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.recurrent.fill(0.0);
+        self.oscillator_phase = 0.0;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Brain {
+    kind: ControllerKind,
+    network: CompiledNetwork,
+}
+
+impl Brain {
+    pub fn from_genome(genome: &Genome) -> Self {
+        Self {
+            kind: genome.controller,
+            network: CompiledNetwork::compile(&genome.brain),
+        }
+    }
+
+    pub fn reset_state(&self) -> BrainState {
+        BrainState::new(self.network.output_count())
+    }
+
+    pub fn think(&self, observations: &[f32], state: &mut BrainState) -> Vec<f32> {
+        let mut inputs = Vec::with_capacity(self.network.input_count());
+        inputs.extend_from_slice(observations);
+
+        if self.kind == ControllerKind::Recurrent {
+            inputs.extend_from_slice(&state.recurrent);
+        }
+
+        inputs.resize(self.network.input_count(), 0.0);
+        let mut outputs = self.network.forward(&inputs);
+
+        match self.kind {
+            ControllerKind::FeedForward => {}
+            ControllerKind::Recurrent => {
+                state.recurrent.clear();
+                state.recurrent.extend(outputs.iter().copied());
+            }
+            ControllerKind::Cpg => {
+                let wave = state.oscillator_phase.sin();
+                state.oscillator_phase += 0.18;
+                for (index, output) in outputs.iter_mut().enumerate() {
+                    let phase = if index % 2 == 0 { wave } else { -wave };
+                    *output = (*output + phase * 0.65).tanh();
+                }
+            }
+        }
+
+        outputs
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Genome, rng::Rng};
+
+    use super::{Brain, ControllerKind};
+
+    #[test]
+    fn recurrent_brain_carries_state_between_steps() {
+        let mut rng = Rng::new(7);
+        let genome = Genome::minimal(ControllerKind::Recurrent, &mut rng);
+        let brain = Brain::from_genome(&genome);
+        let mut state = brain.reset_state();
+        let observations = vec![0.0; genome.brain.input_count];
+
+        let first = brain.think(&observations, &mut state);
+        let second = brain.think(&observations, &mut state);
+
+        assert_eq!(first.len(), second.len());
+        assert!(state.recurrent.iter().any(|value| value.abs() > 0.0));
+    }
+}

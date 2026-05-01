@@ -1,47 +1,46 @@
-# Wayfinder AI
+# Axiom
 
-Wayfinder AI is a Fabric mod for Minecraft 1.21.1 that adds an explainable AI villager companion.
+Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neural controllers across terrain tasks, then keeps diverse elites in a MAP-Elites archive instead of collapsing everything to one winner.
 
-The first entity is the Wayfinder Villager: a survival escort NPC that follows its owner, avoids hazards, retreats from hostile mobs, and explains its current decision through owner-only chat messages.
+This rebuild is scoped from the previous Axiom review thread:
 
-## Commands
+- morphology genomes with directional attachments
+- compiled neural controllers with explicit bias handling
+- feedforward, recurrent, and CPG controller modes
+- stateful rollout semantics shared by evaluation and playback-style code
+- deterministic simulation with replace-on-respawn behavior
+- task fitness for flat and rough terrain
+- MAP-Elites quality-diversity search
+- regression tests for the correctness failures called out in review
 
-- `/wayfinder summon` spawns a Wayfinder Villager and binds it to the executing player.
-- `/wayfinder recall` moves the nearest owned Wayfinder Villager back beside you.
-- `/wayfinder dismiss` removes all owned Wayfinder Villagers within command range.
-- `/wayfinder debug on` enables automatic reasoning chat for the player's companion.
-- `/wayfinder debug off` disables automatic reasoning chat.
-- `/wayfinder explain` prints the companion's latest decision on demand.
-
-## Behavior
-
-The companion observes nearby hazards, hostile mobs, owner distance, health, and safe candidate positions. A pure Java decision engine scores candidate actions and returns the selected goal, action, target, score, and explanation.
-
-V1 actions:
-
-- `AVOID_HAZARD`
-- `RETREAT_FROM_MOB`
-- `FOLLOW_OWNER`
-- `HOLD_POSITION`
-
-## Build
-
-This project targets Java 21.
+## Quick Start
 
 ```sh
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-GRADLE_USER_HOME=/tmp/wayfinder-gradle-home gradle test
-GRADLE_USER_HOME=/tmp/wayfinder-gradle-home gradle build
+cargo test --workspace
+cargo run -- demo
+cargo run -- animate cpg
+cargo run -- evaluate cpg
+cargo run -- evolve --generations 10 --population 32 --steps 180
+cargo run --example rough_terrain_benchmark
 ```
 
-The remapped mod jar is written to `build/libs/wayfinder-ai-0.1.0.jar`.
+## Architecture
 
-## Manual Test Loop
+- `genome.rs` encodes body morphology and neural genomes.
+- `network.rs` compiles neural genomes and keeps bias nodes separate from external inputs.
+- `policy.rs` implements feedforward, recurrent, and CPG brain execution.
+- `simulation.rs` owns the deterministic physics approximation and body attachment geometry.
+- `fitness.rs` defines task rollout and the shared observation vector.
+- `qd.rs` implements MAP-Elites archive insertion, replacement, and sampling.
+- `evolution.rs` ties evaluation, archive maintenance, and parent selection together.
 
-1. Install `build/libs/wayfinder-ai-0.1.0.jar` into a Fabric 1.21.1 instance.
-2. Run `/wayfinder summon`.
-3. Walk away and confirm the companion follows.
-4. Place lava or fire nearby and confirm it moves away with a reason in chat.
-5. Spawn a hostile mob nearby and confirm it retreats.
-6. Run `/wayfinder explain` to inspect confidence and top candidate scores.
-7. Run `/wayfinder recall` to reset its position, or `/wayfinder dismiss` to clean up.
+## Current Scope
+
+This is a working Rust foundation, not a full browser-backed physics app yet. The next natural layer is a web/server surface over the archive: config editing, archive grid browsing, replay selection, lineage history, and persistent checkpoints.
+
+The `animate` command provides a terminal replay renderer over the same simulation loop:
+
+```sh
+cargo run -- animate cpg --task rough --frames 160 --fps 20
+cargo run -- animate feedforward --task flat --frames 80 --fps 30
+```
