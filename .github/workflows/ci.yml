@@ -32,3 +32,6 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+      - name: Animation smoke test
+        run: cargo run -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18

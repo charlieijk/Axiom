@@ -191,14 +191,16 @@ fn draw_terrain(grid: &mut [Vec<char>], world: &World, left: f32, top: f32, scal
     let height = grid.len();
     let width = grid[0].len();
 
-    for col in 0..width {
-        let x = left + col as f32 * scale;
+    for (col, x) in std::iter::successors(Some(left), |x| Some(*x + scale))
+        .take(width)
+        .enumerate()
+    {
         let y = world.terrain_height(x);
         if let Some(row) = row_for_y(y, top, scale, height) {
             grid[row][col] = '#';
-            for ground_row in row + 1..height {
-                if grid[ground_row][col] == ' ' {
-                    grid[ground_row][col] = '.';
+            for ground in grid.iter_mut().skip(row + 1) {
+                if ground[col] == ' ' {
+                    ground[col] = '.';
                 }
             }
         }
