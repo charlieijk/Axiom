@@ -297,7 +297,23 @@ a {
   .status-strip {
     left: 12px;
     right: 12px;
-    bottom: 62px;
+    bottom: 58px;
+  }
+
+  .scene-actions {
+    left: 12px;
+    right: 12px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .scene-actions button,
+  .scene-actions a {
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 4px;
+    font-size: 11px;
   }
 
   .control-hint {
