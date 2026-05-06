@@ -1,0 +1,306 @@
+:root {
+  color-scheme: dark;
+  --bg: #09100d;
+  --panel: rgba(13, 21, 17, 0.78);
+  --panel-strong: rgba(18, 28, 22, 0.9);
+  --line: rgba(219, 238, 211, 0.16);
+  --text: #edf5e9;
+  --muted: #aab8a3;
+  --green: #8eea9f;
+  --amber: #e8c46f;
+  --blue: #80b7ea;
+  --red: #e36f65;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+a {
+  font: inherit;
+}
+
+.graphics-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#graphics-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  background: #07100e;
+}
+
+.hud-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.objective-chip,
+.status-strip,
+.field-log,
+.scene-actions,
+.control-hint {
+  pointer-events: auto;
+}
+
+.objective-chip {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: min(300px, calc(100vw - 36px));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 11px 13px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.objective-chip span,
+.status-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.objective-chip strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  line-height: 1.12;
+}
+
+.objective-chip small {
+  display: block;
+  margin-top: 5px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-strip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+.status-strip div {
+  min-width: 0;
+  background: var(--panel);
+  padding: 10px 12px;
+  backdrop-filter: blur(14px);
+}
+
+.status-strip strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.field-log {
+  position: absolute;
+  top: 104px;
+  left: 18px;
+  max-width: min(300px, calc(100vw - 36px));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(9, 15, 13, 0.74);
+  backdrop-filter: blur(12px);
+}
+
+.field-log summary {
+  cursor: pointer;
+  padding: 9px 12px;
+  color: var(--amber);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  list-style-position: inside;
+  text-transform: uppercase;
+}
+
+.field-log p {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.scene-actions {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: min(500px, calc(100vw - 36px));
+}
+
+.scene-actions button,
+.scene-actions a {
+  display: inline-grid;
+  place-items: center;
+  min-width: 74px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-strong);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+  backdrop-filter: blur(12px);
+}
+
+.scene-actions button:hover,
+.scene-actions a:hover {
+  border-color: var(--amber);
+}
+
+.scene-actions button.is-active {
+  border-color: rgba(142, 234, 159, 0.56);
+  color: #dff9e5;
+  box-shadow: inset 0 0 0 1px rgba(142, 234, 159, 0.18);
+}
+
+.control-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(142, 234, 159, 0.35);
+  border-radius: 999px;
+  background: rgba(9, 16, 13, 0.68);
+  color: #dff9e5;
+  padding: 8px 13px;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  backdrop-filter: blur(10px);
+  opacity: 0.92;
+  transition: opacity 220ms ease;
+}
+
+.control-hint.is-faded {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-hint {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .objective-chip {
+    top: 12px;
+    left: 12px;
+    width: min(250px, calc(100vw - 24px));
+  }
+
+  .objective-chip strong {
+    font-size: 16px;
+  }
+
+  .status-strip {
+    top: auto;
+    right: 12px;
+    bottom: 64px;
+    grid-template-columns: repeat(3, minmax(62px, 1fr));
+  }
+
+  .status-strip div {
+    padding: 8px 9px;
+  }
+
+  .status-strip strong {
+    font-size: 15px;
+  }
+
+  .field-log {
+    top: 92px;
+    left: 12px;
+    max-width: min(250px, calc(100vw - 24px));
+  }
+
+  .scene-actions {
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .scene-actions button,
+  .scene-actions a {
+    min-width: 58px;
+    min-height: 38px;
+  }
+
+  .control-hint {
+    bottom: 18px;
+    left: 12px;
+    max-width: calc(100vw - 210px);
+    transform: none;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 460px) {
+  .objective-chip,
+  .field-log {
+    width: calc(100vw - 24px);
+    max-width: none;
+  }
+
+  .field-log {
+    top: 88px;
+  }
+
+  .status-strip {
+    left: 12px;
+    right: 12px;
+    bottom: 62px;
+  }
+
+  .control-hint {
+    display: none;
+  }
+}

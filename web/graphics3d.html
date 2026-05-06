@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Axiom 3D Graphics Example</title>
+    <link rel="stylesheet" href="/graphics3d.css" />
+  </head>
+  <body>
+    <main class="graphics-shell">
+      <canvas id="graphics-canvas" aria-label="3D creature replay scene"></canvas>
+
+      <section class="hud-layer" aria-label="3D replay HUD">
+        <div class="objective-chip">
+          <span>Objective</span>
+          <strong>Test the evolved stride</strong>
+          <small id="run-label">CPG / rough / seed 29</small>
+        </div>
+
+        <div class="status-strip" aria-label="Replay status">
+          <div>
+            <span>Time</span>
+            <strong id="metric-time">0.00s</strong>
+          </div>
+          <div>
+            <span>Distance</span>
+            <strong id="metric-distance">0.00</strong>
+          </div>
+          <div>
+            <span>Tilt</span>
+            <strong id="metric-tilt">0.00</strong>
+          </div>
+        </div>
+
+        <details class="field-log">
+          <summary>Field Log</summary>
+          <p id="field-note">Minimal genome replaying across rough terrain.</p>
+        </details>
+
+        <div class="scene-actions" aria-label="Scene actions">
+          <button id="play-toggle" type="button">Pause</button>
+          <button id="reroll" type="button">Reroll</button>
+          <button id="camera-mode" type="button">Follow</button>
+          <button id="fx-toggle" type="button">Full FX</button>
+          <a href="/" aria-label="Return to 2D replay">2D</a>
+        </div>
+
+        <div id="control-hint" class="control-hint">Drag to orbit</div>
+      </section>
+    </main>
+
+    <script type="module" src="/graphics3d.js"></script>
+  </body>
+</html>
