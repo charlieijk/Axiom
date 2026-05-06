@@ -243,7 +243,7 @@ fn print_help() {
            axiom demo\n\
            axiom evaluate [feedforward|recurrent|cpg]\n\
            axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
-           axiom gui [--host HOST] [--port PORT]\n\
+           axiom gui [--host HOST] [--port PORT] [--check]\n\
            axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n"
     );
 }
