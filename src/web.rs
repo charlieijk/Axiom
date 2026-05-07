@@ -9,6 +9,9 @@ use crate::{Genome, TaskKind, animation::capture_replay, policy::ControllerKind,
 const INDEX_HTML: &str = include_str!("../web/index.html");
 const APP_CSS: &str = include_str!("../web/styles.css");
 const APP_JS: &str = include_str!("../web/app.js");
+const GRAPHICS_HTML: &str = include_str!("../web/graphics3d.html");
+const GRAPHICS_CSS: &str = include_str!("../web/graphics3d.css");
+const GRAPHICS_JS: &str = include_str!("../web/graphics3d.js");
 
 #[derive(Clone, Debug)]
 pub struct GuiConfig {
@@ -72,6 +75,8 @@ pub fn gui_smoke_check() -> io::Result<()> {
     let html = response_body("/");
     let css = response_body("/styles.css");
     let js = response_body("/app.js");
+    let graphics = response_body("/3d");
+    let graphics_js = response_body("/graphics3d.js");
     let replay = replay_json(ReplayRequest {
         frames: 3,
         ..ReplayRequest::default()
@@ -81,6 +86,11 @@ pub fn gui_smoke_check() -> io::Result<()> {
     {
         return Err(io::Error::other(
             "GUI assets did not include expected UI markers",
+        ));
+    }
+    if !graphics.contains("graphics-canvas") || !graphics_js.contains("THREE_MODULE_URL") {
+        return Err(io::Error::other(
+            "3D GUI assets did not include expected scene markers",
         ));
     }
     if !replay.contains("\"frames\"") || !replay.contains("\"bodies\"") {
@@ -122,8 +132,15 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let (status, content_type, body) = match path {
         "/" | "/index.html" => ("200 OK", "text/html; charset=utf-8", response_body("/")),
+        "/3d" | "/3d.html" => ("200 OK", "text/html; charset=utf-8", response_body("/3d")),
         "/styles.css" => ("200 OK", "text/css; charset=utf-8", response_body(path)),
+        "/graphics3d.css" => ("200 OK", "text/css; charset=utf-8", response_body(path)),
         "/app.js" => (
+            "200 OK",
+            "application/javascript; charset=utf-8",
+            response_body(path),
+        ),
+        "/graphics3d.js" => (
             "200 OK",
             "application/javascript; charset=utf-8",
             response_body(path),
@@ -150,8 +167,11 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
 fn response_body(path: &str) -> String {
     match path {
         "/" | "/index.html" => INDEX_HTML.to_string(),
+        "/3d" | "/3d.html" => GRAPHICS_HTML.to_string(),
         "/styles.css" => APP_CSS.to_string(),
         "/app.js" => APP_JS.to_string(),
+        "/graphics3d.css" => GRAPHICS_CSS.to_string(),
+        "/graphics3d.js" => GRAPHICS_JS.to_string(),
         _ => String::new(),
     }
 }
