@@ -515,6 +515,11 @@ function createCreatureRenderer(THREE, scene) {
   const ghostSnapshots = [];
   let ghostAccumulator = 0;
   const yAxis = new THREE.Vector3(Y_AXIS.x, Y_AXIS.y, Y_AXIS.z);
+  const scratchOffset = new THREE.Vector3();
+  const scratchZAxis = new THREE.Vector3(0, 0, 1);
+  const scratchStart = new THREE.Vector3();
+  const scratchEnd = new THREE.Vector3();
+  const scratchDirection = new THREE.Vector3();
 
   function clearMeshes() {
     for (const mesh of [...bodyMeshes, ...actuatorMeshes, ...jointMeshes]) {
@@ -620,9 +625,9 @@ function createCreatureRenderer(THREE, scene) {
       const actuator = actuatorMeshes[index];
       actuator.visible = node.actuator > 0.01;
       if (actuator.visible) {
-        const offset = new THREE.Vector3(scaleX * 0.36, 0, depth * 0.56);
-        offset.applyAxisAngle(new THREE.Vector3(0, 0, 1), angle);
-        actuator.position.set(center[0] + offset.x, center[1] + 0.46 + offset.y, offset.z);
+        scratchOffset.set(scaleX * 0.36, 0, depth * 0.56);
+        scratchOffset.applyAxisAngle(scratchZAxis, angle);
+        actuator.position.set(center[0] + scratchOffset.x, center[1] + 0.46 + scratchOffset.y, scratchOffset.z);
         actuator.scale.setScalar(0.75 + Math.sin(frame.time * 8 + index) * 0.12);
       }
     }
@@ -634,17 +639,17 @@ function createCreatureRenderer(THREE, scene) {
         joint.visible = false;
         continue;
       }
-      const start = new THREE.Vector3(segment[0][0], segment[0][1] + 0.46, 0);
-      const end = new THREE.Vector3(segment[1][0], segment[1][1] + 0.46, 0);
-      const direction = end.clone().sub(start);
-      const length = direction.length();
+      scratchStart.set(segment[0][0], segment[0][1] + 0.46, 0);
+      scratchEnd.set(segment[1][0], segment[1][1] + 0.46, 0);
+      scratchDirection.copy(scratchEnd).sub(scratchStart);
+      const length = scratchDirection.length();
       joint.visible = length > 0.001;
       if (!joint.visible) {
         continue;
       }
-      joint.position.copy(start).add(end).multiplyScalar(0.5);
+      joint.position.copy(scratchStart).add(scratchEnd).multiplyScalar(0.5);
       joint.scale.set(1, length, 1);
-      joint.quaternion.setFromUnitVectors(yAxis, direction.normalize());
+      joint.quaternion.setFromUnitVectors(yAxis, scratchDirection.normalize());
     }
 
     ghostAccumulator += deltaSeconds;
