@@ -75,6 +75,11 @@ function start(THREE) {
   const clock = new THREE.Clock();
   const renderParts = createSceneParts(THREE, scene);
   const creature = createCreatureRenderer(THREE, scene);
+  const cameraScratch = {
+    target: new THREE.Vector3(),
+    offset: new THREE.Vector3(),
+    desired: new THREE.Vector3(),
+  };
   let terrain = createTerrain(THREE, replayRequest.task);
   scene.add(terrain.mesh);
 
@@ -135,7 +140,7 @@ function start(THREE) {
       const frame = state.replay.frames[state.frameIndex];
       creature.update(frame, state.replay.body, deltaSeconds);
       renderParts.update(frame, state.replay.task, now * 0.001);
-      updateCamera(THREE, camera, frame, state.replay.task, deltaSeconds);
+      updateCamera(camera, frame, state.replay.task, deltaSeconds, cameraScratch);
       updateMetrics();
     }
 
@@ -668,7 +673,7 @@ function createCreatureRenderer(THREE, scene) {
   return { rebuild, update };
 }
 
-function updateCamera(THREE, camera, frame, task, deltaSeconds) {
+function updateCamera(camera, frame, task, deltaSeconds, scratch) {
   const terrainY = terrainHeight(task, frame.root[0], 0);
   const portrait = camera.aspect < 0.72;
   const showcaseYaw = Math.sin(frame.time * 0.33) * 0.72;
@@ -681,20 +686,16 @@ function updateCamera(THREE, camera, frame, task, deltaSeconds) {
     state.cameraMode === "orbit" ? 0 : state.cameraMode === "showcase" ? Math.sin(frame.time * 0.21) * 1.4 : portrait ? -0.78 : -3.15;
   const cameraHeight =
     (portrait ? 3.35 : 2.25) + (state.cameraMode === "showcase" ? 0.72 : 0);
-  const target = new THREE.Vector3(
-    frame.root[0] + targetLead,
-    Math.max(terrainY + 0.7, frame.root[1] + 0.38),
-    0,
-  );
-  const offset = new THREE.Vector3(
+  scratch.target.set(frame.root[0] + targetLead, Math.max(terrainY + 0.7, frame.root[1] + 0.38), 0);
+  scratch.offset.set(
     sideOffset + Math.sin(yaw) * (portrait ? 0.9 : 1.5),
     cameraHeight + state.orbitPitch,
     Math.cos(yaw) * radius,
   );
-  const desired = target.clone().add(offset);
+  scratch.desired.copy(scratch.target).add(scratch.offset);
   const blend = 1 - Math.pow(0.0008, Math.max(0.001, deltaSeconds));
-  camera.position.lerp(desired, blend);
-  camera.lookAt(target);
+  camera.position.lerp(scratch.desired, blend);
+  camera.lookAt(scratch.target);
 }
 
 function bindPointerInput(target) {
