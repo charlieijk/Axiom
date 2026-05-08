@@ -57,7 +57,7 @@ impl Brain {
     }
 
     pub fn think(&self, observations: &[f32], state: &mut BrainState) -> Vec<f32> {
-        let mut inputs = Vec::with_capacity(self.network.input_count());
+        let mut inputs = Vec::with_capacity(observations.len() + state.recurrent.len());
         inputs.extend_from_slice(observations);
 
         if self.kind == ControllerKind::Recurrent {
@@ -89,7 +89,11 @@ impl Brain {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Genome, rng::Rng};
+    use crate::{
+        Genome,
+        genome::{ConnectionGene, NeuralGenome, NodeGene, NodeKind, sensor_count},
+        rng::Rng,
+    };
 
     use super::{Brain, ControllerKind};
 
@@ -99,12 +103,55 @@ mod tests {
         let genome = Genome::minimal(ControllerKind::Recurrent, &mut rng);
         let brain = Brain::from_genome(&genome);
         let mut state = brain.reset_state();
-        let observations = vec![0.0; genome.brain.input_count];
+        let observations = vec![0.0; sensor_count(&genome.body)];
 
         let first = brain.think(&observations, &mut state);
         let second = brain.think(&observations, &mut state);
 
         assert_eq!(first.len(), second.len());
         assert!(state.recurrent.iter().any(|value| value.abs() > 0.0));
+    }
+
+    #[test]
+    fn recurrent_brain_uses_prior_outputs_as_inputs() {
+        let genome = Genome {
+            body: crate::BodyGenome::seed_quadruped(),
+            controller: ControllerKind::Recurrent,
+            brain: NeuralGenome {
+                input_count: 2,
+                output_count: 1,
+                nodes: vec![
+                    NodeGene {
+                        id: 0,
+                        kind: NodeKind::Input,
+                    },
+                    NodeGene {
+                        id: 1,
+                        kind: NodeKind::Input,
+                    },
+                    NodeGene {
+                        id: 2,
+                        kind: NodeKind::Bias,
+                    },
+                    NodeGene {
+                        id: 3,
+                        kind: NodeKind::Output,
+                    },
+                ],
+                connections: vec![ConnectionGene {
+                    from: 1,
+                    to: 3,
+                    weight: 2.0,
+                    enabled: true,
+                }],
+            },
+        };
+        let brain = Brain::from_genome(&genome);
+        let mut state = brain.reset_state();
+        state.recurrent[0] = 0.5;
+
+        let output = brain.think(&[0.0], &mut state);
+
+        assert!((output[0] - 1.0_f32.tanh()).abs() < 0.0001);
     }
 }

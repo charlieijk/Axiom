@@ -56,7 +56,11 @@ pub fn serve_gui(config: GuiConfig) -> io::Result<SocketAddr> {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_connection(stream)?,
+            Ok(stream) => {
+                if let Err(error) = handle_connection(stream) {
+                    eprintln!("request failed: {error}");
+                }
+            }
             Err(error) => eprintln!("connection failed: {error}"),
         }
     }
@@ -92,7 +96,10 @@ pub fn gui_smoke_check() -> io::Result<()> {
 fn bind_first_available(host: &str, preferred_port: u16) -> io::Result<TcpListener> {
     let mut last_error = None;
     for offset in 0..20 {
-        let address = format!("{host}:{}", preferred_port + offset);
+        let Some(port) = preferred_port.checked_add(offset) else {
+            break;
+        };
+        let address = format!("{host}:{port}");
         match TcpListener::bind(&address) {
             Ok(listener) => return Ok(listener),
             Err(error) => last_error = Some(error),
@@ -304,7 +311,7 @@ fn url_decode(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ReplayRequest, gui_smoke_check, replay_json};
+    use super::{ReplayRequest, bind_first_available, gui_smoke_check, replay_json};
 
     #[test]
     fn gui_smoke_check_loads_assets_and_replay_data() {
@@ -320,5 +327,12 @@ mod tests {
 
         assert!(json.contains("\"body\""));
         assert_eq!(json.matches("\"time\"").count(), 3);
+    }
+
+    #[test]
+    fn port_probe_handles_upper_port_bound() {
+        let result = bind_first_available("not-a-real-host.invalid", u16::MAX);
+
+        assert!(result.is_err());
     }
 }
