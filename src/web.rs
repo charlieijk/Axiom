@@ -384,7 +384,8 @@ fn replay_json(request: ReplayRequest) -> String {
                 task: request.task,
                 search_mode: SearchMode::MapElites,
                 ..EvolutionConfig::default()
-            });
+            })
+            .expect("validated replay evolution config should be valid");
             (
                 report.best_genome,
                 report.best_evaluation,
