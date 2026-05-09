@@ -1,7 +1,17 @@
+# Rust build output
 /target/
+**/*.rs.bk
+
+# Build tool output
 /.gradle/
 /build/
-**/*.rs.bk
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs and local editor/OS files
 *.log
 .DS_Store
 .idea/
