@@ -2,7 +2,9 @@ use crate::fitness::{Evaluation, Metrics};
 use crate::genome::Genome;
 use crate::rng::Rng;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Axis {
     Distance,
     StableDistance,
@@ -14,6 +16,31 @@ pub enum Axis {
 }
 
 impl Axis {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Distance => "distance",
+            Self::StableDistance => "stable-distance",
+            Self::JumpHeight => "jump-height",
+            Self::Uprightness => "uprightness",
+            Self::Stability => "stability",
+            Self::BodyCount => "body-count",
+            Self::ActuatorCount => "actuator-count",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "distance" => Some(Self::Distance),
+            "stable-distance" | "stable_distance" | "stable" => Some(Self::StableDistance),
+            "jump-height" | "jump_height" | "jump" => Some(Self::JumpHeight),
+            "uprightness" | "upright" => Some(Self::Uprightness),
+            "stability" => Some(Self::Stability),
+            "body-count" | "body_count" | "body" => Some(Self::BodyCount),
+            "actuator-count" | "actuator_count" | "actuators" => Some(Self::ActuatorCount),
+            _ => None,
+        }
+    }
+
     pub fn value(self, metrics: &Metrics) -> f32 {
         match self {
             Self::Distance => metrics.distance,
@@ -39,14 +66,18 @@ impl Axis {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Elite {
+    pub genome_id: u64,
+    pub parent_id: Option<u64>,
+    pub generation: usize,
+    pub mutation_summary: String,
     pub genome: Genome,
     pub evaluation: Evaluation,
     pub cell: (usize, usize),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Archive {
     pub x_axis: Axis,
     pub y_axis: Axis,
@@ -69,6 +100,18 @@ impl Archive {
     }
 
     pub fn insert(&mut self, genome: Genome, evaluation: Evaluation) -> bool {
+        self.insert_tracked(genome, evaluation, 0, None, 0, "manual".to_string())
+    }
+
+    pub fn insert_tracked(
+        &mut self,
+        genome: Genome,
+        evaluation: Evaluation,
+        genome_id: u64,
+        parent_id: Option<u64>,
+        generation: usize,
+        mutation_summary: String,
+    ) -> bool {
         let cell = self.cell_for(&evaluation.metrics);
         let index = self.index(cell);
         let should_replace = self.cells[index]
@@ -78,6 +121,10 @@ impl Archive {
 
         if should_replace {
             self.cells[index] = Some(Elite {
+                genome_id,
+                parent_id,
+                generation,
+                mutation_summary,
                 genome,
                 evaluation,
                 cell,
@@ -109,10 +156,24 @@ impl Archive {
     }
 
     pub fn sample_parent<'a>(&'a self, rng: &mut Rng) -> Option<&'a Genome> {
+        self.sample_elite(rng).map(|elite| &elite.genome)
+    }
+
+    pub fn sample_elite<'a>(&'a self, rng: &mut Rng) -> Option<&'a Elite> {
         let elites: Vec<&Elite> = self.elites().collect();
-        elites
-            .get(rng.range_usize(elites.len()))
-            .map(|elite| &elite.genome)
+        elites.get(rng.range_usize(elites.len())).copied()
+    }
+
+    pub fn elite_at(&self, cell: (usize, usize)) -> Option<&Elite> {
+        if cell.0 >= self.width || cell.1 >= self.height {
+            return None;
+        }
+
+        self.cells[self.index(cell)].as_ref()
+    }
+
+    pub fn cells(&self) -> &[Option<Elite>] {
+        &self.cells
     }
 
     pub fn cell_for(&self, metrics: &Metrics) -> (usize, usize) {

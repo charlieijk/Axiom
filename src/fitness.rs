@@ -2,14 +2,16 @@ use crate::genome::{BodyGenome, Genome, sensor_count};
 use crate::policy::Brain;
 use crate::simulation::{Simulation, Snapshot, World};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TaskKind {
     FlatRun,
     RoughTerrain,
     Recovery,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Metrics {
     pub distance: f32,
     pub stable_distance: f32,
@@ -22,7 +24,7 @@ pub struct Metrics {
     pub energy: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Evaluation {
     pub fitness: f32,
     pub metrics: Metrics,
@@ -30,6 +32,23 @@ pub struct Evaluation {
 }
 
 impl TaskKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::FlatRun => "flat",
+            Self::RoughTerrain => "rough",
+            Self::Recovery => "recovery",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "flat" | "flat-run" => Some(Self::FlatRun),
+            "rough" | "rough-terrain" => Some(Self::RoughTerrain),
+            "recovery" => Some(Self::Recovery),
+            _ => None,
+        }
+    }
+
     pub fn world(self) -> World {
         match self {
             Self::FlatRun => World::flat(),

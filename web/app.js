@@ -2,32 +2,320 @@ const canvas = document.getElementById("simulator");
 const ctx = canvas.getContext("2d");
 
 const controls = {
-  controller: document.getElementById("controller"),
   task: document.getElementById("task"),
   seed: document.getElementById("seed"),
-  frames: document.getElementById("frames"),
-  generate: document.getElementById("generate"),
+  generations: document.getElementById("generations"),
+  population: document.getElementById("population"),
+  steps: document.getElementById("steps"),
+  archiveWidth: document.getElementById("archive-width"),
+  archiveHeight: document.getElementById("archive-height"),
+  xAxis: document.getElementById("x-axis"),
+  yAxis: document.getElementById("y-axis"),
+  runButton: document.getElementById("run-button"),
+  checkpointList: document.getElementById("checkpoint-list"),
+  loadCheckpoint: document.getElementById("load-checkpoint"),
+  archiveGrid: document.getElementById("archive-grid"),
+  archiveMeta: document.getElementById("archive-meta"),
+  status: document.getElementById("status"),
+  progressLabel: document.getElementById("progress-label"),
+  progressFill: document.getElementById("progress-fill"),
+  selectedCell: document.getElementById("selected-cell"),
+  view3d: document.getElementById("view-3d"),
   play: document.getElementById("play"),
   restart: document.getElementById("restart"),
   speed: document.getElementById("speed"),
   speedValue: document.getElementById("speed-value"),
   scrubber: document.getElementById("scrubber"),
   frameValue: document.getElementById("frame-value"),
-  status: document.getElementById("status"),
-  bodyCount: document.getElementById("body-count"),
-  jointCount: document.getElementById("joint-count"),
   time: document.getElementById("metric-time"),
   distance: document.getElementById("metric-distance"),
   tilt: document.getElementById("metric-tilt"),
+  eliteFitness: document.getElementById("elite-fitness"),
+  eliteDistance: document.getElementById("elite-distance"),
+  eliteStability: document.getElementById("elite-stability"),
+  eliteBody: document.getElementById("elite-body"),
+  eliteGenome: document.getElementById("elite-genome"),
+  eliteGeneration: document.getElementById("elite-generation"),
+  eliteMutation: document.getElementById("elite-mutation"),
+  lineageList: document.getElementById("lineage-list"),
 };
 
 const state = {
+  run: null,
+  archive: null,
+  selected: null,
   replay: null,
   frameIndex: 0,
   playing: true,
   lastTick: performance.now(),
   accumulator: 0,
+  pollTimer: null,
 };
+
+function readNumber(input, fallback) {
+  const value = Number(input.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function runConfig() {
+  return {
+    task: controls.task.value,
+    seed: readNumber(controls.seed, 42),
+    generations: readNumber(controls.generations, 16),
+    population: readNumber(controls.population, 32),
+    evaluation_steps: readNumber(controls.steps, 180),
+    archive_width: readNumber(controls.archiveWidth, 12),
+    archive_height: readNumber(controls.archiveHeight, 8),
+    x_axis: controls.xAxis.value,
+    y_axis: controls.yAxis.value,
+    search_mode: "map-elites",
+  };
+}
+
+async function apiJson(path, options = {}) {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed: ${response.status}`);
+  }
+  return payload;
+}
+
+async function startRun() {
+  clearTimeout(state.pollTimer);
+  controls.runButton.disabled = true;
+  setStatus("Starting", 0);
+  clearArchive();
+  try {
+    const started = await apiJson("/api/runs", {
+      method: "POST",
+      body: JSON.stringify(runConfig()),
+    });
+    state.run = { id: started.id, status: started.status };
+    pollRun(started.id);
+  } catch (error) {
+    controls.runButton.disabled = false;
+    setStatus("Error", 0);
+    console.error(error);
+  }
+}
+
+async function pollRun(runId) {
+  try {
+    const run = await apiJson(`/api/runs/${encodeURIComponent(runId)}`);
+    state.run = run;
+    updateRunSummary(run);
+    if (run.status === "completed") {
+      controls.runButton.disabled = false;
+      await loadArchive(run.id);
+      await refreshCheckpoints();
+      return;
+    }
+    if (run.status === "failed") {
+      controls.runButton.disabled = false;
+      setStatus(run.error || "Failed", 1);
+      return;
+    }
+    state.pollTimer = setTimeout(() => pollRun(runId), 500);
+  } catch (error) {
+    controls.runButton.disabled = false;
+    setStatus("Error", 0);
+    console.error(error);
+  }
+}
+
+function updateRunSummary(run) {
+  const percent = Math.round(run.progress * 100);
+  setStatus(
+    `${run.status} / gen ${run.generation}/${run.total_generations} / ${run.occupied_cells} cells`,
+    run.progress,
+  );
+  controls.progressLabel.textContent = `${percent}%`;
+}
+
+function setStatus(text, progress) {
+  controls.status.textContent = text;
+  controls.progressFill.style.width = `${Math.round(progress * 100)}%`;
+  controls.progressLabel.textContent = `${Math.round(progress * 100)}%`;
+}
+
+async function loadArchive(runId) {
+  state.archive = await apiJson(`/api/runs/${encodeURIComponent(runId)}/archive`);
+  controls.archiveMeta.textContent = `${state.archive.width} x ${state.archive.height} / ${state.archive.x_axis} by ${state.archive.y_axis}`;
+  renderArchive();
+  const best = bestOccupiedCell();
+  if (best) {
+    selectCell(best);
+  }
+}
+
+function renderArchive() {
+  const archive = state.archive;
+  controls.archiveGrid.innerHTML = "";
+  controls.archiveGrid.style.gridTemplateColumns = `repeat(${archive.width}, minmax(0, 1fr))`;
+  const occupied = archive.cells.filter((cell) => cell.occupied);
+  const minFitness = Math.min(...occupied.map((cell) => cell.fitness || 0));
+  const maxFitness = Math.max(...occupied.map((cell) => cell.fitness || 0));
+
+  for (const cell of archive.cells) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "archive-cell";
+    button.dataset.x = String(cell.x);
+    button.dataset.y = String(cell.y);
+    button.disabled = !cell.occupied;
+    button.setAttribute("role", "gridcell");
+    button.setAttribute("aria-label", cell.occupied ? `Cell ${cell.x},${cell.y}` : "Empty cell");
+
+    if (cell.occupied) {
+      const normalized =
+        maxFitness <= minFitness ? 0.7 : ((cell.fitness || 0) - minFitness) / (maxFitness - minFitness);
+      button.style.setProperty("--heat", String(normalized));
+      button.textContent = formatCompact(cell.fitness);
+      button.addEventListener("click", () => selectCell(cell));
+    }
+
+    controls.archiveGrid.appendChild(button);
+  }
+}
+
+function bestOccupiedCell() {
+  if (!state.archive) {
+    return null;
+  }
+  return state.archive.cells
+    .filter((cell) => cell.occupied)
+    .sort((a, b) => (b.fitness || 0) - (a.fitness || 0))[0];
+}
+
+async function selectCell(cell) {
+  if (!state.run || !cell.occupied) {
+    return;
+  }
+  state.selected = cell;
+  for (const element of controls.archiveGrid.querySelectorAll(".archive-cell")) {
+    element.classList.toggle(
+      "selected",
+      Number(element.dataset.x) === cell.x && Number(element.dataset.y) === cell.y,
+    );
+  }
+  updateEliteDetails(cell);
+  await fetchReplayForCell(cell);
+}
+
+function updateEliteDetails(cell) {
+  controls.selectedCell.textContent = `Cell ${cell.x}, ${cell.y}`;
+  controls.eliteFitness.textContent = formatNumber(cell.fitness);
+  controls.eliteDistance.textContent = formatNumber(cell.distance);
+  controls.eliteStability.textContent = formatNumber(cell.stability);
+  controls.eliteBody.textContent = `${formatCompact(cell.body_count)} / ${formatCompact(cell.actuator_count)}`;
+  controls.eliteGenome.textContent = String(cell.genome_id || "--");
+  controls.eliteGeneration.textContent = String(cell.generation ?? "--");
+  controls.eliteMutation.textContent = cell.mutation_summary || "No mutation summary.";
+  controls.lineageList.innerHTML = "";
+  for (const item of lineageForCell(cell)) {
+    const row = document.createElement("li");
+    row.textContent = item;
+    controls.lineageList.appendChild(row);
+  }
+
+  const url = `/3d?run=${encodeURIComponent(state.run.id)}&cell=${cell.x},${cell.y}`;
+  controls.view3d.href = url;
+  controls.view3d.classList.remove("disabled");
+  controls.view3d.setAttribute("aria-disabled", "false");
+}
+
+function lineageForCell(cell) {
+  if (Array.isArray(cell.lineage) && cell.lineage.length > 0) {
+    return cell.lineage.map(
+      (step) =>
+        `Genome ${step.genome_id} / gen ${step.generation} / ${labelFor(step.controller)}`,
+    );
+  }
+  return [`Genome ${cell.genome_id} / gen ${cell.generation}`];
+}
+
+async function fetchReplayForCell(cell) {
+  controls.status.textContent = "Loading replay";
+  const query = new URLSearchParams({
+    run: state.run.id,
+    cell: `${cell.x},${cell.y}`,
+    frames: "260",
+  });
+  state.replay = await apiJson(`/api/replay?${query.toString()}`);
+  state.frameIndex = 0;
+  state.accumulator = 0;
+  state.playing = true;
+  controls.play.textContent = "Pause";
+  controls.scrubber.max = Math.max(0, state.replay.frames.length - 1);
+  setStatus("Ready", state.run.progress || 1);
+  updateMetrics();
+  draw();
+}
+
+async function refreshCheckpoints() {
+  try {
+    const response = await apiJson("/api/checkpoints");
+    controls.checkpointList.innerHTML = "";
+    if (response.files.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No checkpoints";
+      controls.checkpointList.appendChild(option);
+      return;
+    }
+    for (const file of response.files) {
+      const option = document.createElement("option");
+      option.value = file.name;
+      option.textContent = `${file.name} (${Math.round(file.bytes / 1024)} KB)`;
+      controls.checkpointList.appendChild(option);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadSelectedCheckpoint() {
+  const name = controls.checkpointList.value;
+  if (!name) {
+    return;
+  }
+  clearTimeout(state.pollTimer);
+  setStatus("Loading checkpoint", 0);
+  try {
+    const run = await apiJson(`/api/checkpoints/${encodeURIComponent(name)}`, { method: "POST" });
+    state.run = run;
+    updateRunSummary(run);
+    await loadArchive(run.id);
+  } catch (error) {
+    setStatus("Error", 0);
+    console.error(error);
+  }
+}
+
+function clearArchive() {
+  state.archive = null;
+  state.selected = null;
+  state.replay = null;
+  controls.archiveGrid.innerHTML = "";
+  controls.archiveMeta.textContent = "Run in progress";
+  controls.selectedCell.textContent = "Select an occupied cell";
+  controls.eliteFitness.textContent = "--";
+  controls.eliteDistance.textContent = "--";
+  controls.eliteStability.textContent = "--";
+  controls.eliteBody.textContent = "--";
+  controls.eliteGenome.textContent = "--";
+  controls.eliteGeneration.textContent = "--";
+  controls.eliteMutation.textContent = "No elite selected.";
+  controls.lineageList.innerHTML = "";
+  controls.view3d.href = "/3d";
+  controls.view3d.classList.add("disabled");
+  controls.view3d.setAttribute("aria-disabled", "true");
+  draw();
+}
 
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -38,31 +326,6 @@ function resizeCanvas() {
   draw();
 }
 
-async function fetchReplay() {
-  controls.status.textContent = "Loading";
-  const query = new URLSearchParams({
-    controller: controls.controller.value,
-    task: controls.task.value,
-    seed: controls.seed.value,
-    frames: controls.frames.value,
-  });
-  const response = await fetch(`/api/replay?${query.toString()}`);
-  if (!response.ok) {
-    throw new Error(`Replay request failed: ${response.status}`);
-  }
-  state.replay = await response.json();
-  state.frameIndex = 0;
-  state.accumulator = 0;
-  state.playing = true;
-  controls.play.textContent = "Pause";
-  controls.scrubber.max = Math.max(0, state.replay.frames.length - 1);
-  controls.bodyCount.textContent = String(state.replay.body.length);
-  controls.jointCount.textContent = String(Math.max(0, state.replay.body.length - 1));
-  controls.status.textContent = "Ready";
-  updateMetrics();
-  draw();
-}
-
 function draw() {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -70,6 +333,9 @@ function draw() {
   drawBackground(width, height);
 
   if (!state.replay) {
+    ctx.fillStyle = "rgba(237, 243, 232, 0.62)";
+    ctx.font = "700 15px Inter, system-ui, sans-serif";
+    ctx.fillText("Start a run or load a checkpoint, then select an occupied archive cell.", 28, 38);
     return;
   }
 
@@ -270,18 +536,28 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-controls.generate.addEventListener("click", () => {
-  fetchReplay().catch((error) => {
-    controls.status.textContent = "Error";
-    console.error(error);
-  });
-});
+function formatNumber(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : "--";
+}
 
+function formatCompact(value) {
+  return Number.isFinite(value) ? Number(value).toFixed(0) : "";
+}
+
+function labelFor(value) {
+  return String(value || "")
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+controls.runButton.addEventListener("click", startRun);
+controls.loadCheckpoint.addEventListener("click", loadSelectedCheckpoint);
 controls.play.addEventListener("click", () => {
   state.playing = !state.playing;
   controls.play.textContent = state.playing ? "Pause" : "Play";
 });
-
 controls.restart.addEventListener("click", () => {
   state.frameIndex = 0;
   state.accumulator = 0;
@@ -290,9 +566,7 @@ controls.restart.addEventListener("click", () => {
   updateMetrics();
   draw();
 });
-
 controls.speed.addEventListener("input", updateMetrics);
-
 controls.scrubber.addEventListener("input", () => {
   state.playing = false;
   controls.play.textContent = "Play";
@@ -300,11 +574,8 @@ controls.scrubber.addEventListener("input", () => {
   updateMetrics();
   draw();
 });
-
 window.addEventListener("resize", resizeCanvas);
+
 resizeCanvas();
-fetchReplay().catch((error) => {
-  controls.status.textContent = "Error";
-  console.error(error);
-});
+refreshCheckpoints();
 requestAnimationFrame(tick);

@@ -1,14 +1,16 @@
 use crate::genome::{BodyGenome, Genome};
 use crate::math::{Attachment, Vec2, child_center_offset, face_anchor};
 
-#[derive(Clone, Copy, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum TerrainKind {
     Flat,
     Rough,
     Steps,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct World {
     pub terrain: TerrainKind,
     pub gravity: f32,
@@ -47,13 +49,13 @@ impl World {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct JointAnchor {
     pub parent_anchor: Vec2,
     pub child_anchor: Vec2,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct JointState {
     pub node_id: usize,
     pub attachment: Attachment,
@@ -62,7 +64,7 @@ pub struct JointState {
     pub angular_velocity: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CreatureInstance {
     pub root_position: Vec2,
     pub root_velocity: Vec2,
@@ -73,7 +75,7 @@ pub struct CreatureInstance {
     pub joints: Vec<JointState>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Snapshot {
     pub time: f32,
     pub root_position: Vec2,

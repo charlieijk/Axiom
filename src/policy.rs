@@ -1,7 +1,9 @@
 use crate::genome::Genome;
 use crate::network::CompiledNetwork;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ControllerKind {
     FeedForward,
     Recurrent,
@@ -16,9 +18,18 @@ impl ControllerKind {
             Self::Cpg => "cpg",
         }
     }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "feedforward" | "ff" => Some(Self::FeedForward),
+            "recurrent" | "rnn" => Some(Self::Recurrent),
+            "cpg" => Some(Self::Cpg),
+            _ => None,
+        }
+    }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BrainState {
     pub recurrent: Vec<f32>,
     pub oscillator_phase: f32,

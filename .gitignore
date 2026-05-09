@@ -6,6 +6,9 @@
 /.gradle/
 /build/
 
+# Local evolution artifacts
+/checkpoints/
+
 # Local environment files
 .env
 .env.*

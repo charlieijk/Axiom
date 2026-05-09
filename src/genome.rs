@@ -2,7 +2,9 @@ use crate::math::{Attachment, Vec2, child_center_offset};
 use crate::policy::ControllerKind;
 use crate::rng::Rng;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum NodeKind {
     Input,
     Bias,
@@ -10,13 +12,13 @@ pub enum NodeKind {
     Output,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NodeGene {
     pub id: usize,
     pub kind: NodeKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConnectionGene {
     pub from: usize,
     pub to: usize,
@@ -24,7 +26,7 @@ pub struct ConnectionGene {
     pub enabled: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NeuralGenome {
     pub input_count: usize,
     pub output_count: usize,
@@ -86,7 +88,7 @@ impl NeuralGenome {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BodyNode {
     pub id: usize,
     pub parent: Option<usize>,
@@ -101,7 +103,7 @@ impl BodyNode {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BodyGenome {
     pub nodes: Vec<BodyNode>,
 }
@@ -196,7 +198,7 @@ impl BodyGenome {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Genome {
     pub body: BodyGenome,
     pub brain: NeuralGenome,

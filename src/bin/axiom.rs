@@ -1,10 +1,11 @@
 use axiom::{
-    EvolutionConfig, Genome, SearchMode, TaskKind,
+    Axis, EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind,
     animation::{TerminalAnimationConfig, play_terminal_animation},
     evolution::run_evolution,
     fitness::evaluate,
     policy::ControllerKind,
     rng::Rng,
+    save_checkpoint,
     web::{GuiConfig, gui_smoke_check, serve_gui},
 };
 
@@ -70,6 +71,7 @@ fn evaluate_once(controller: Option<&str>) {
 
 fn evolve(args: Vec<String>) {
     let mut config = EvolutionConfig::default();
+    let mut checkpoint_path = None::<String>;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -82,11 +84,32 @@ fn evolve(args: Vec<String>) {
             "--steps" => {
                 config.evaluation_steps = parse_next(&args, &mut index, "steps");
             }
+            "--task" => {
+                let value: String = parse_next(&args, &mut index, "task");
+                config.task = parse_task_or_exit(&value);
+            }
             "--classic" => {
                 config.search_mode = SearchMode::Classic;
             }
             "--seed" => {
                 config.seed = parse_next(&args, &mut index, "seed");
+            }
+            "--archive-width" => {
+                config.archive_width = parse_next(&args, &mut index, "archive width");
+            }
+            "--archive-height" => {
+                config.archive_height = parse_next(&args, &mut index, "archive height");
+            }
+            "--x-axis" => {
+                let value: String = parse_next(&args, &mut index, "x-axis");
+                config.archive_x_axis = parse_axis_or_exit(&value);
+            }
+            "--y-axis" => {
+                let value: String = parse_next(&args, &mut index, "y-axis");
+                config.archive_y_axis = parse_axis_or_exit(&value);
+            }
+            "--checkpoint" => {
+                checkpoint_path = Some(parse_next(&args, &mut index, "checkpoint"));
             }
             other => {
                 eprintln!("unknown evolve option: {other}");
@@ -123,6 +146,15 @@ fn evolve(args: Vec<String>) {
         report.archive.occupied_count(),
         report.archive.coverage() * 100.0
     );
+
+    if let Some(path) = checkpoint_path {
+        let checkpoint = EvolutionCheckpoint::from_report(report);
+        if let Err(error) = save_checkpoint(&path, &checkpoint) {
+            eprintln!("checkpoint failed: {error}");
+            std::process::exit(1);
+        }
+        println!("checkpoint: {path}");
+    }
 }
 
 fn animate(args: Vec<String>) {
@@ -151,13 +183,7 @@ fn animate(args: Vec<String>) {
             }
             "--task" => {
                 let value: String = parse_next(&args, &mut index, "task");
-                task = match parse_task(&value) {
-                    Some(task) => task,
-                    None => {
-                        eprintln!("unknown task: {value}");
-                        std::process::exit(2);
-                    }
-                };
+                task = parse_task_or_exit(&value);
             }
             "--no-clear" => {
                 config.clear_screen = false;
@@ -198,6 +224,9 @@ fn gui(args: Vec<String>) {
             "--check" => {
                 config.check = true;
             }
+            "--checkpoint-dir" => {
+                config.checkpoint_dir = parse_next(&args, &mut index, "checkpoint-dir");
+            }
             other => {
                 eprintln!("unknown gui option: {other}");
                 std::process::exit(2);
@@ -233,21 +262,25 @@ fn parse_next<T: std::str::FromStr>(args: &[String], index: &mut usize, label: &
 }
 
 fn parse_controller(value: &str) -> Option<ControllerKind> {
-    match value {
-        "feedforward" | "ff" => Some(ControllerKind::FeedForward),
-        "recurrent" | "rnn" => Some(ControllerKind::Recurrent),
-        "cpg" => Some(ControllerKind::Cpg),
-        _ => None,
-    }
+    ControllerKind::parse(value)
 }
 
 fn parse_task(value: &str) -> Option<TaskKind> {
-    match value {
-        "flat" | "flat-run" => Some(TaskKind::FlatRun),
-        "rough" | "rough-terrain" => Some(TaskKind::RoughTerrain),
-        "recovery" => Some(TaskKind::Recovery),
-        _ => None,
-    }
+    TaskKind::parse(value)
+}
+
+fn parse_task_or_exit(value: &str) -> TaskKind {
+    parse_task(value).unwrap_or_else(|| {
+        eprintln!("unknown task: {value}");
+        std::process::exit(2);
+    })
+}
+
+fn parse_axis_or_exit(value: &str) -> Axis {
+    Axis::parse(value).unwrap_or_else(|| {
+        eprintln!("unknown archive axis: {value}");
+        std::process::exit(2);
+    })
 }
 
 fn print_help() {
@@ -257,7 +290,9 @@ fn print_help() {
            axiom demo\n\
            axiom evaluate [feedforward|recurrent|cpg]\n\
            axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
-           axiom gui [--host HOST] [--port PORT] [--check]\n\
-           axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n"
+           axiom gui [--host HOST] [--port PORT] [--checkpoint-dir DIR] [--check]\n\
+           axiom evolve [--task flat|rough|recovery] [--generations N] [--population N] [--steps N]\n\
+                        [--archive-width N] [--archive-height N] [--x-axis AXIS] [--y-axis AXIS]\n\
+                        [--classic] [--seed N] [--checkpoint PATH]\n"
     );
 }

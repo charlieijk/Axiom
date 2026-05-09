@@ -25,6 +25,13 @@ const replayRequest = {
   evaluation_steps: 180,
 };
 
+const pageParams = new URLSearchParams(window.location.search);
+if (pageParams.has("run") && pageParams.has("cell")) {
+  replayRequest.run = pageParams.get("run");
+  replayRequest.cell = pageParams.get("cell");
+  replayRequest.frames = Number(pageParams.get("frames") || replayRequest.frames);
+}
+
 const state = {
   replay: null,
   frameIndex: 0,
@@ -98,10 +105,13 @@ function start(THREE) {
   }
 
   async function fetchReplay() {
-    const evolving = replayRequest.mode === "evolved";
+    const archiveReplay = Boolean(replayRequest.run && replayRequest.cell);
+    const evolving = replayRequest.mode === "evolved" && !archiveReplay;
     ui.fieldNote.textContent = evolving
       ? `Evolving ${replayRequest.population} candidates for ${replayRequest.generations} generations.`
-      : "Syncing replay data.";
+      : archiveReplay
+        ? `Loading archive cell ${replayRequest.cell}.`
+        : "Syncing replay data.";
     ui.reroll.disabled = true;
     try {
       const query = new URLSearchParams(replayRequest);
@@ -771,7 +781,9 @@ function bindActions(fetchReplay) {
   });
 
   ui.reroll.addEventListener("click", () => {
-    replayRequest.seed += 1;
+    if (!replayRequest.run) {
+      replayRequest.seed += 1;
+    }
     fetchReplay().catch((error) => {
       ui.fieldNote.textContent = "Replay data failed to load.";
       console.error(error);
@@ -790,7 +802,11 @@ function bindActions(fetchReplay) {
 
 function updateActionButtons() {
   ui.playToggle.textContent = state.playing ? "Pause" : "Play";
-  ui.reroll.textContent = replayRequest.mode === "evolved" ? "Evolve" : "Reroll";
+  ui.reroll.textContent = replayRequest.run
+    ? "Reload"
+    : replayRequest.mode === "evolved"
+      ? "Evolve"
+      : "Reroll";
   ui.cameraMode.textContent = CAMERA_LABELS[state.cameraMode];
   ui.fxToggle.textContent = state.effectsEnabled ? "Full FX" : "Lite FX";
   ui.cameraMode.classList.toggle("is-active", state.cameraMode !== "follow");
@@ -836,12 +852,19 @@ function labelFor(value) {
 
 function replayRunLabel(replay) {
   const generationLabel =
-    replay.source === "evolved" ? `gen ${replay.generations}` : replay.source || "minimal";
+    replay.source === "archive"
+      ? `cell ${replay.cell ? replay.cell.join(",") : "--"}`
+      : replay.source === "evolved"
+        ? `gen ${replay.generations}`
+        : replay.source || "minimal";
   return `${labelFor(replay.controller)} / ${labelFor(replay.task)} / ${generationLabel} / seed ${replay.seed}`;
 }
 
 function replayFieldNote(replay) {
   const bodyText = `${replay.body.length} body parts and ${Math.max(0, replay.body.length - 1)} joints`;
+  if (replay.source === "archive") {
+    return `${bodyText}, replaying archived genome ${replay.genome_id} from run ${replay.run_id}. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}.`;
+  }
   if (replay.source !== "evolved") {
     return `${bodyText}, replaying a seed genome across rough terrain.`;
   }
