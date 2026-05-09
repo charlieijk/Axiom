@@ -1,10 +1,15 @@
 use std::{
-    fmt::Write as FmtWrite,
     io::{self, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
+    thread,
 };
 
-use crate::{Genome, TaskKind, animation::capture_replay, policy::ControllerKind, rng::Rng};
+use serde::Serialize;
+
+use crate::{
+    EvolutionConfig, Genome, SearchMode, TaskKind, animation::capture_replay, evaluate,
+    policy::ControllerKind, rng::Rng, run_evolution,
+};
 
 const INDEX_HTML: &str = include_str!("../web/index.html");
 const APP_CSS: &str = include_str!("../web/styles.css");
@@ -12,6 +17,9 @@ const APP_JS: &str = include_str!("../web/app.js");
 const GRAPHICS_HTML: &str = include_str!("../web/graphics3d.html");
 const GRAPHICS_CSS: &str = include_str!("../web/graphics3d.css");
 const GRAPHICS_JS: &str = include_str!("../web/graphics3d.js");
+// `/api/replay?mode=evolved` is an interactive preview, not a full experiment runner.
+// Defaults stay around 60k simulated evaluation steps; longer searches belong in the CLI.
+const MAX_EVOLVED_REPLAY_COST: usize = 250_000;
 
 #[derive(Clone, Debug)]
 pub struct GuiConfig {
@@ -32,21 +40,93 @@ impl Default for GuiConfig {
 
 #[derive(Clone, Copy, Debug)]
 struct ReplayRequest {
+    mode: ReplayMode,
     controller: ControllerKind,
     task: TaskKind,
     seed: u64,
     frames: usize,
     dt: f32,
+    generations: usize,
+    population_size: usize,
+    evaluation_steps: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ReplayMode {
+    Minimal,
+    Evolved,
+}
+
+impl ReplayMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Minimal => "minimal",
+            Self::Evolved => "evolved",
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum ReplayRequestError {
+    EvolvedBudgetExceeded { cost: usize, max_cost: usize },
+}
+
+#[derive(Serialize)]
+struct ReplayErrorResponse {
+    error: &'static str,
+    cost: usize,
+    max_cost: usize,
+}
+
+#[derive(Serialize)]
+struct ReplayResponse {
+    controller: &'static str,
+    task: &'static str,
+    seed: u64,
+    source: &'static str,
+    generations: usize,
+    population: usize,
+    evaluation_steps: usize,
+    fitness: f32,
+    best_distance: f32,
+    stable_distance: f32,
+    uprightness: f32,
+    stability: f32,
+    terminal_tilt: f32,
+    dt: f32,
+    body: Vec<ReplayBodyNode>,
+    frames: Vec<ReplayFrameResponse>,
+}
+
+#[derive(Serialize)]
+struct ReplayBodyNode {
+    id: usize,
+    parent: Option<usize>,
+    size: [f32; 2],
+    actuator: f32,
+}
+
+#[derive(Serialize)]
+struct ReplayFrameResponse {
+    time: f32,
+    root: [f32; 2],
+    tilt: f32,
+    bodies: Vec<[f32; 2]>,
+    joints: Vec<[[f32; 2]; 2]>,
 }
 
 impl Default for ReplayRequest {
     fn default() -> Self {
         Self {
+            mode: ReplayMode::Minimal,
             controller: ControllerKind::Cpg,
             task: TaskKind::RoughTerrain,
             seed: 19,
             frames: 220,
             dt: 0.05,
+            generations: 12,
+            population_size: 28,
+            evaluation_steps: 180,
         }
     }
 }
@@ -60,8 +140,20 @@ pub fn serve_gui(config: GuiConfig) -> io::Result<SocketAddr> {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                if let Err(error) = handle_connection(stream) {
-                    eprintln!("request failed: {error}");
+                let peer = stream.peer_addr().ok();
+                let worker = thread::Builder::new()
+                    .name("axiom-gui-request".to_string())
+                    .spawn(move || {
+                        if let Err(error) = handle_connection(stream) {
+                            match peer {
+                                Some(peer) => eprintln!("request from {peer} failed: {error}"),
+                                None => eprintln!("request failed: {error}"),
+                            }
+                        }
+                    });
+
+                if let Err(error) = worker {
+                    eprintln!("failed to start request worker: {error}");
                 }
             }
             Err(error) => eprintln!("connection failed: {error}"),
@@ -145,11 +237,7 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
             "application/javascript; charset=utf-8",
             response_body(path),
         ),
-        "/api/replay" => (
-            "200 OK",
-            "application/json; charset=utf-8",
-            replay_json(parse_replay_request(query)),
-        ),
+        "/api/replay" => api_replay_response(query),
         _ => (
             "404 Not Found",
             "text/plain; charset=utf-8",
@@ -182,6 +270,11 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
         let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
         let value = url_decode(value);
         match key {
+            "mode" | "source" => {
+                if let Some(mode) = parse_replay_mode(&value) {
+                    request.mode = mode;
+                }
+            }
             "controller" => {
                 if let Some(controller) = parse_controller(&value) {
                     request.controller = controller;
@@ -202,6 +295,21 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
                     request.frames = frames.clamp(1, 900);
                 }
             }
+            "generations" => {
+                if let Ok(generations) = value.parse::<usize>() {
+                    request.generations = generations.clamp(1, 40);
+                }
+            }
+            "population" | "population_size" => {
+                if let Ok(population_size) = value.parse::<usize>() {
+                    request.population_size = population_size.clamp(4, 96);
+                }
+            }
+            "evaluation_steps" | "evolve_steps" => {
+                if let Ok(evaluation_steps) = value.parse::<usize>() {
+                    request.evaluation_steps = evaluation_steps.clamp(20, 500);
+                }
+            }
             _ => {}
         }
     }
@@ -209,76 +317,138 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
     request
 }
 
+fn api_replay_response(query: &str) -> (&'static str, &'static str, String) {
+    let request = parse_replay_request(query);
+    match validate_replay_request(&request) {
+        Ok(()) => (
+            "200 OK",
+            "application/json; charset=utf-8",
+            replay_json(request),
+        ),
+        Err(error) => (
+            "400 Bad Request",
+            "application/json; charset=utf-8",
+            replay_error_json(error),
+        ),
+    }
+}
+
+fn validate_replay_request(request: &ReplayRequest) -> Result<(), ReplayRequestError> {
+    if request.mode == ReplayMode::Evolved {
+        let cost = evolved_replay_cost(request);
+        if cost > MAX_EVOLVED_REPLAY_COST {
+            return Err(ReplayRequestError::EvolvedBudgetExceeded {
+                cost,
+                max_cost: MAX_EVOLVED_REPLAY_COST,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+fn evolved_replay_cost(request: &ReplayRequest) -> usize {
+    request
+        .generations
+        .saturating_mul(request.population_size)
+        .saturating_mul(request.evaluation_steps)
+}
+
+fn replay_error_json(error: ReplayRequestError) -> String {
+    match error {
+        ReplayRequestError::EvolvedBudgetExceeded { cost, max_cost } => {
+            let response = ReplayErrorResponse {
+                error: "evolved replay request exceeds the interactive preview budget",
+                cost,
+                max_cost,
+            };
+            serde_json::to_string(&response).expect("serializing replay error cannot fail")
+        }
+    }
+}
+
 fn replay_json(request: ReplayRequest) -> String {
-    let mut rng = Rng::new(request.seed);
-    let genome = Genome::minimal(request.controller, &mut rng);
-    let frames = capture_replay(&genome, request.task, request.frames, request.dt);
-    let mut json = String::new();
-
-    write!(
-        json,
-        "{{\"controller\":\"{}\",\"task\":\"{}\",\"seed\":{},\"dt\":{},\"body\":[",
-        request.controller.as_str(),
-        task_name(request.task),
-        request.seed,
-        request.dt
-    )
-    .expect("writing to a String cannot fail");
-
-    for (index, node) in genome.body.nodes.iter().enumerate() {
-        if index > 0 {
-            json.push(',');
+    let (genome, evaluation, generations, population_size) = match request.mode {
+        ReplayMode::Minimal => {
+            let mut rng = Rng::new(request.seed);
+            let genome = Genome::minimal(request.controller, &mut rng);
+            let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
+            (genome, evaluation, 0, 1)
         }
-        write!(
-            json,
-            "{{\"id\":{},\"parent\":{},\"size\":[{:.4},{:.4}],\"actuator\":{:.4}}}",
-            node.id,
-            node.parent
-                .map(|parent| parent.to_string())
-                .unwrap_or_else(|| "null".to_string()),
-            node.size.x,
-            node.size.y,
-            node.actuator_strength
-        )
-        .expect("writing to a String cannot fail");
-    }
-
-    json.push_str("],\"frames\":[");
-    for (frame_index, frame) in frames.iter().enumerate() {
-        if frame_index > 0 {
-            json.push(',');
-        }
-        write!(
-            json,
-            "{{\"time\":{:.4},\"root\":[{:.4},{:.4}],\"tilt\":{:.4},\"bodies\":[",
-            frame.time, frame.root_position.x, frame.root_position.y, frame.tilt
-        )
-        .expect("writing to a String cannot fail");
-
-        for (body_index, center) in frame.body_centers.iter().enumerate() {
-            if body_index > 0 {
-                json.push(',');
-            }
-            write!(json, "[{:.4},{:.4}]", center.x, center.y)
-                .expect("writing to a String cannot fail");
-        }
-
-        json.push_str("],\"joints\":[");
-        for (joint_index, (start, end)) in frame.joint_segments.iter().enumerate() {
-            if joint_index > 0 {
-                json.push(',');
-            }
-            write!(
-                json,
-                "[[{:.4},{:.4}],[{:.4},{:.4}]]",
-                start.x, start.y, end.x, end.y
+        ReplayMode::Evolved => {
+            let report = run_evolution(EvolutionConfig {
+                seed: request.seed,
+                population_size: request.population_size,
+                generations: request.generations,
+                evaluation_steps: request.evaluation_steps,
+                task: request.task,
+                search_mode: SearchMode::MapElites,
+                ..EvolutionConfig::default()
+            });
+            (
+                report.best_genome,
+                report.best_evaluation,
+                request.generations,
+                request.population_size,
             )
-            .expect("writing to a String cannot fail");
         }
-        json.push_str("]}");
+    };
+    let frames = capture_replay(&genome, request.task, request.frames, request.dt);
+    let response = ReplayResponse {
+        controller: genome.controller.as_str(),
+        task: task_name(request.task),
+        seed: request.seed,
+        source: request.mode.as_str(),
+        generations,
+        population: population_size,
+        evaluation_steps: request.evaluation_steps,
+        fitness: evaluation.fitness,
+        best_distance: evaluation.metrics.distance,
+        stable_distance: evaluation.metrics.stable_distance,
+        uprightness: evaluation.metrics.uprightness,
+        stability: evaluation.metrics.stability,
+        terminal_tilt: evaluation.metrics.terminal_tilt,
+        dt: request.dt,
+        body: genome
+            .body
+            .nodes
+            .iter()
+            .map(|node| ReplayBodyNode {
+                id: node.id,
+                parent: node.parent,
+                size: [node.size.x, node.size.y],
+                actuator: node.actuator_strength,
+            })
+            .collect(),
+        frames: frames
+            .iter()
+            .map(|frame| ReplayFrameResponse {
+                time: frame.time,
+                root: [frame.root_position.x, frame.root_position.y],
+                tilt: frame.tilt,
+                bodies: frame
+                    .body_centers
+                    .iter()
+                    .map(|center| [center.x, center.y])
+                    .collect(),
+                joints: frame
+                    .joint_segments
+                    .iter()
+                    .map(|(start, end)| [[start.x, start.y], [end.x, end.y]])
+                    .collect(),
+            })
+            .collect(),
+    };
+
+    serde_json::to_string(&response).expect("serializing replay response cannot fail")
+}
+
+fn parse_replay_mode(value: &str) -> Option<ReplayMode> {
+    match value {
+        "minimal" | "seed" | "raw" => Some(ReplayMode::Minimal),
+        "evolved" | "evolve" | "champion" => Some(ReplayMode::Evolved),
+        _ => None,
     }
-    json.push_str("]}");
-    json
 }
 
 fn parse_controller(value: &str) -> Option<ControllerKind> {
@@ -331,7 +501,11 @@ fn url_decode(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ReplayRequest, bind_first_available, gui_smoke_check, replay_json};
+    use super::{
+        MAX_EVOLVED_REPLAY_COST, ReplayMode, ReplayRequest, ReplayRequestError,
+        api_replay_response, bind_first_available, gui_smoke_check, parse_replay_request,
+        replay_json, validate_replay_request,
+    };
 
     #[test]
     fn gui_smoke_check_loads_assets_and_replay_data() {
@@ -344,9 +518,56 @@ mod tests {
             frames: 2,
             ..ReplayRequest::default()
         });
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("replay should serialize as JSON");
+        let frames = value["frames"]
+            .as_array()
+            .expect("frames should be an array");
 
-        assert!(json.contains("\"body\""));
-        assert_eq!(json.matches("\"time\"").count(), 3);
+        assert!(value.get("body").is_some());
+        assert_eq!(frames.len(), 3);
+    }
+
+    #[test]
+    fn evolved_replay_default_stays_within_interactive_budget() {
+        let request = ReplayRequest {
+            mode: ReplayMode::Evolved,
+            ..ReplayRequest::default()
+        };
+
+        assert!(validate_replay_request(&request).is_ok());
+    }
+
+    #[test]
+    fn oversized_evolved_replay_returns_bad_request() {
+        let request =
+            parse_replay_request("mode=evolved&generations=40&population=96&evaluation_steps=500");
+        let cost = 40 * 96 * 500;
+
+        assert_eq!(
+            validate_replay_request(&request),
+            Err(ReplayRequestError::EvolvedBudgetExceeded {
+                cost,
+                max_cost: MAX_EVOLVED_REPLAY_COST
+            })
+        );
+
+        let (status, content_type, body) =
+            api_replay_response("mode=evolved&generations=40&population=96&evaluation_steps=500");
+        let value: serde_json::Value =
+            serde_json::from_str(&body).expect("error should serialize as JSON");
+
+        assert_eq!(status, "400 Bad Request");
+        assert_eq!(content_type, "application/json; charset=utf-8");
+        assert_eq!(
+            value["error"],
+            "evolved replay request exceeds the interactive preview budget"
+        );
+        assert_eq!(value["cost"].as_u64(), Some(cost as u64));
+        assert_eq!(
+            value["max_cost"].as_u64(),
+            Some(MAX_EVOLVED_REPLAY_COST as u64)
+        );
     }
 
     #[test]

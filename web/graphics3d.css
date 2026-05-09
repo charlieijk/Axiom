@@ -196,6 +196,11 @@ a {
   border-color: var(--amber);
 }
 
+.scene-actions button:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
 .scene-actions button.is-active {
   border-color: rgba(142, 234, 159, 0.56);
   color: #dff9e5;

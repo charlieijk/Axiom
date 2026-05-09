@@ -59,7 +59,7 @@ pub fn run_evolution(config: EvolutionConfig) -> EvolutionReport {
         .collect();
 
     let mut archive = Archive::new(
-        Axis::Distance,
+        Axis::StableDistance,
         Axis::BodyCount,
         config.archive_width,
         config.archive_height,

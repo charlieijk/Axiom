@@ -5,8 +5,10 @@ use crate::rng::Rng;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis {
     Distance,
+    StableDistance,
     JumpHeight,
     Uprightness,
+    Stability,
     BodyCount,
     ActuatorCount,
 }
@@ -15,8 +17,10 @@ impl Axis {
     pub fn value(self, metrics: &Metrics) -> f32 {
         match self {
             Self::Distance => metrics.distance,
+            Self::StableDistance => metrics.stable_distance,
             Self::JumpHeight => metrics.jump_height,
             Self::Uprightness => metrics.uprightness,
+            Self::Stability => metrics.stability,
             Self::BodyCount => metrics.body_count,
             Self::ActuatorCount => metrics.actuator_count,
         }
@@ -25,8 +29,10 @@ impl Axis {
     pub fn range(self) -> (f32, f32) {
         match self {
             Self::Distance => (0.0, 12.0),
+            Self::StableDistance => (0.0, 12.0),
             Self::JumpHeight => (0.0, 2.0),
             Self::Uprightness => (0.0, 1.0),
+            Self::Stability => (0.0, 1.0),
             Self::BodyCount => (1.0, 10.0),
             Self::ActuatorCount => (1.0, 10.0),
         }
