@@ -175,15 +175,30 @@ where
                 1 => ControllerKind::Recurrent,
                 _ => ControllerKind::Cpg,
             };
-            let genome = Genome::minimal(controller, &mut rng);
+            let variation_depth = seed_variation_depth(index);
+            let mut genome = Genome::minimal(controller, &mut rng);
+            for _ in 0..variation_depth {
+                genome = genome.mutate(&mut rng);
+            }
             let id = next_genome_id;
             next_genome_id += 1;
-            lineage.push(lineage_record(id, None, 0, "seed".to_string(), &genome));
+            let mutation_summary = if variation_depth == 0 {
+                "seed".to_string()
+            } else {
+                format!("seed variant depth {variation_depth}")
+            };
+            lineage.push(lineage_record(
+                id,
+                None,
+                0,
+                mutation_summary.clone(),
+                &genome,
+            ));
             TrackedGenome {
                 id,
                 parent_id: None,
                 generation: 0,
-                mutation_summary: "seed".to_string(),
+                mutation_summary,
                 genome,
             }
         })
@@ -256,7 +271,7 @@ where
         while next_population.len() < config.population_size {
             let parent = if config.search_mode == SearchMode::MapElites {
                 archive
-                    .sample_elite(&mut rng)
+                    .sample_elite_tournament(&mut rng, 3)
                     .map(TrackedGenome::from_elite)
                     .unwrap_or_else(|| elites[rng.range_usize(elites.len())].clone())
             } else {
@@ -335,6 +350,10 @@ fn lineage_record(
         actuator_count: genome.body.actuator_count(),
         mutation_summary,
     }
+}
+
+fn seed_variation_depth(population_index: usize) -> usize {
+    (population_index / 3).min(4)
 }
 
 fn mutation_summary(parent: &Genome, child: &Genome) -> String {
@@ -441,5 +460,40 @@ mod tests {
 
         assert_eq!(report.archive.x_axis, Axis::Distance);
         assert_eq!(report.archive.y_axis, Axis::Stability);
+    }
+
+    #[test]
+    fn initial_population_records_seed_variation_depths() {
+        let report = run_evolution(EvolutionConfig {
+            population_size: 12,
+            generations: 1,
+            evaluation_steps: 5,
+            ..EvolutionConfig::default()
+        })
+        .expect("valid config should run");
+
+        let summaries: Vec<_> = report
+            .lineage
+            .iter()
+            .map(|record| record.mutation_summary.as_str())
+            .collect();
+
+        assert_eq!(
+            summaries,
+            vec![
+                "seed",
+                "seed",
+                "seed",
+                "seed variant depth 1",
+                "seed variant depth 1",
+                "seed variant depth 1",
+                "seed variant depth 2",
+                "seed variant depth 2",
+                "seed variant depth 2",
+                "seed variant depth 3",
+                "seed variant depth 3",
+                "seed variant depth 3",
+            ]
+        );
     }
 }

@@ -86,6 +86,104 @@ impl NeuralGenome {
             }
         }
     }
+
+    pub fn resized_preserving(
+        &self,
+        input_count: usize,
+        output_count: usize,
+        rng: &mut Rng,
+    ) -> Self {
+        let preserved = self.direct_output_connections();
+        let mut next = Self::minimal(input_count, output_count, rng);
+
+        for connection in &mut next.connections {
+            let Some(source) = new_minimal_source(connection.from, input_count) else {
+                continue;
+            };
+            let Some(output_index) = new_minimal_output_index(connection.to, input_count) else {
+                continue;
+            };
+
+            if let Some(preserved) = preserved.iter().find(|candidate| {
+                candidate.source == source && candidate.output_index == output_index
+            }) {
+                connection.weight = preserved.weight;
+                connection.enabled = preserved.enabled;
+            }
+        }
+
+        next
+    }
+
+    fn direct_output_connections(&self) -> Vec<PreservedConnection> {
+        let input_ids = sorted_node_ids(&self.nodes, NodeKind::Input);
+        let bias_ids = sorted_node_ids(&self.nodes, NodeKind::Bias);
+        let output_ids = sorted_node_ids(&self.nodes, NodeKind::Output);
+
+        self.connections
+            .iter()
+            .filter_map(|connection| {
+                let source = if let Some(index) = input_ids
+                    .iter()
+                    .position(|node_id| *node_id == connection.from)
+                {
+                    PreservedSource::Input(index)
+                } else if bias_ids.contains(&connection.from) {
+                    PreservedSource::Bias
+                } else {
+                    return None;
+                };
+
+                let output_index = output_ids
+                    .iter()
+                    .position(|node_id| *node_id == connection.to)?;
+
+                Some(PreservedConnection {
+                    source,
+                    output_index,
+                    weight: connection.weight,
+                    enabled: connection.enabled,
+                })
+            })
+            .collect()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PreservedSource {
+    Input(usize),
+    Bias,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PreservedConnection {
+    source: PreservedSource,
+    output_index: usize,
+    weight: f32,
+    enabled: bool,
+}
+
+fn sorted_node_ids(nodes: &[NodeGene], kind: NodeKind) -> Vec<usize> {
+    let mut ids: Vec<_> = nodes
+        .iter()
+        .filter_map(|node| (node.kind == kind).then_some(node.id))
+        .collect();
+    ids.sort_unstable();
+    ids
+}
+
+fn new_minimal_source(node_id: usize, input_count: usize) -> Option<PreservedSource> {
+    if node_id < input_count {
+        Some(PreservedSource::Input(node_id))
+    } else if node_id == input_count {
+        Some(PreservedSource::Bias)
+    } else {
+        None
+    }
+}
+
+fn new_minimal_output_index(node_id: usize, input_count: usize) -> Option<usize> {
+    node_id.checked_sub(input_count + 1)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -236,7 +334,7 @@ impl Genome {
         if next.brain.output_count != next.body.output_count()
             || next.brain.input_count != controller_input_count(&next.body, next.controller)
         {
-            next.brain = NeuralGenome::minimal(
+            next.brain = next.brain.resized_preserving(
                 controller_input_count(&next.body, next.controller),
                 next.body.output_count(),
                 rng,
@@ -262,7 +360,7 @@ pub fn controller_input_count(body: &BodyGenome, controller: ControllerKind) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::{Genome, controller_input_count, sensor_count};
+    use super::{Genome, NeuralGenome, controller_input_count, sensor_count};
     use crate::{policy::ControllerKind, rng::Rng};
 
     #[test]
@@ -277,6 +375,43 @@ mod tests {
         assert_eq!(
             genome.brain.input_count,
             controller_input_count(&genome.body, genome.controller)
+        );
+    }
+
+    #[test]
+    fn resized_brain_preserves_overlapping_direct_weights() {
+        let mut rng = Rng::new(44);
+        let mut brain = NeuralGenome::minimal(3, 2, &mut rng);
+        for connection in &mut brain.connections {
+            if connection.from == 0 && connection.to == 4 {
+                connection.weight = 1.25;
+            }
+            if connection.from == 3 && connection.to == 5 {
+                connection.weight = -0.75;
+                connection.enabled = false;
+            }
+        }
+
+        let resized = brain.resized_preserving(5, 3, &mut rng);
+
+        assert_eq!(resized.input_count, 5);
+        assert_eq!(resized.output_count, 3);
+        assert!(
+            resized
+                .connections
+                .iter()
+                .any(|connection| connection.from == 0
+                    && connection.to == 6
+                    && (connection.weight - 1.25).abs() < 0.0001)
+        );
+        assert!(
+            resized
+                .connections
+                .iter()
+                .any(|connection| connection.from == 5
+                    && connection.to == 7
+                    && (connection.weight + 0.75).abs() < 0.0001
+                    && !connection.enabled)
         );
     }
 }

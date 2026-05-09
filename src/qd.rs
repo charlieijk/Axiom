@@ -164,6 +164,27 @@ impl Archive {
         elites.get(rng.range_usize(elites.len())).copied()
     }
 
+    pub fn sample_elite_tournament<'a>(
+        &'a self,
+        rng: &mut Rng,
+        tournament_size: usize,
+    ) -> Option<&'a Elite> {
+        let elites: Vec<&Elite> = self.elites().collect();
+        let mut best = None::<&Elite>;
+
+        for _ in 0..tournament_size.max(1) {
+            let candidate = elites.get(rng.range_usize(elites.len())).copied()?;
+            if best
+                .map(|elite| candidate.evaluation.fitness > elite.evaluation.fitness)
+                .unwrap_or(true)
+            {
+                best = Some(candidate);
+            }
+        }
+
+        best
+    }
+
     pub fn elite_at(&self, cell: (usize, usize)) -> Option<&Elite> {
         if cell.0 >= self.width || cell.1 >= self.height {
             return None;
@@ -261,5 +282,37 @@ mod tests {
             },
         ));
         assert_eq!(archive.occupied_count(), 1);
+    }
+
+    #[test]
+    fn tournament_sampling_handles_empty_and_single_elite_archives() {
+        let mut rng = Rng::new(5);
+        let mut archive = Archive::new(Axis::Distance, Axis::BodyCount, 4, 4);
+
+        assert!(archive.sample_elite_tournament(&mut rng, 3).is_none());
+
+        let genome = Genome::minimal(ControllerKind::FeedForward, &mut rng);
+        assert!(archive.insert_tracked(
+            genome,
+            Evaluation {
+                fitness: 2.5,
+                metrics: Metrics {
+                    distance: 1.0,
+                    body_count: 4.0,
+                    ..Metrics::default()
+                },
+                steps: 10,
+            },
+            42,
+            None,
+            0,
+            "seed".to_string(),
+        ));
+
+        let elite = archive
+            .sample_elite_tournament(&mut rng, 0)
+            .expect("single occupied archive should sample its elite");
+        assert_eq!(elite.genome_id, 42);
+        assert_eq!(elite.evaluation.fitness, 2.5);
     }
 }
