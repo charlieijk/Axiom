@@ -96,7 +96,10 @@ fn evolve(args: Vec<String>) {
         index += 1;
     }
 
-    let report = run_evolution(config);
+    let report = run_evolution(config).unwrap_or_else(|error| {
+        eprintln!("evolution failed: {error}");
+        std::process::exit(2);
+    });
     println!("generations: {}", report.generations);
     println!("best fitness: {:.3}", report.best_evaluation.fitness);
     println!(

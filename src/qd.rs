@@ -57,6 +57,8 @@ pub struct Archive {
 
 impl Archive {
     pub fn new(x_axis: Axis, y_axis: Axis, width: usize, height: usize) -> Self {
+        let width = width.max(1);
+        let height = height.max(1);
         Self {
             x_axis,
             y_axis,
@@ -179,5 +181,24 @@ mod tests {
 
         assert_eq!(archive.occupied_count(), 1);
         assert_eq!(archive.best().unwrap().evaluation.fitness, 2.0);
+    }
+
+    #[test]
+    fn archive_clamps_zero_dimensions_to_insertable_grid() {
+        let mut rng = Rng::new(3);
+        let genome = Genome::minimal(ControllerKind::FeedForward, &mut rng);
+        let mut archive = Archive::new(Axis::Distance, Axis::BodyCount, 0, 0);
+
+        assert_eq!(archive.width, 1);
+        assert_eq!(archive.height, 1);
+        assert!(archive.insert(
+            genome,
+            Evaluation {
+                fitness: 1.0,
+                metrics: Metrics::default(),
+                steps: 1,
+            },
+        ));
+        assert_eq!(archive.occupied_count(), 1);
     }
 }

@@ -10,7 +10,9 @@ pub mod rng;
 pub mod simulation;
 pub mod web;
 
-pub use evolution::{EvolutionConfig, EvolutionReport, SearchMode, run_evolution};
+pub use evolution::{
+    EvolutionConfig, EvolutionConfigError, EvolutionReport, SearchMode, run_evolution,
+};
 pub use fitness::{Evaluation, TaskKind, evaluate};
 pub use genome::{BodyGenome, Genome};
 pub use policy::{Brain, BrainState, ControllerKind};

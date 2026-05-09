@@ -133,7 +133,12 @@ pub fn observation_vector(snapshot: &Snapshot, body: &BodyGenome) -> Vec<f32> {
         body.actuator_count() as f32 / 10.0,
     ]);
 
-    for joint in &snapshot.joints {
+    for joint in snapshot.joints.iter().filter(|joint| {
+        body.nodes
+            .get(joint.node_id)
+            .map(|node| node.is_actuated())
+            .unwrap_or(false)
+    }) {
         observations.push(joint.angle);
         observations.push(joint.angular_velocity);
     }
@@ -149,7 +154,13 @@ pub fn observation_vector(snapshot: &Snapshot, body: &BodyGenome) -> Vec<f32> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Genome, policy::ControllerKind, rng::Rng, simulation::Simulation};
+    use crate::{
+        Genome,
+        math::{Attachment, Vec2},
+        policy::ControllerKind,
+        rng::Rng,
+        simulation::{JointAnchor, JointState, Simulation, Snapshot},
+    };
 
     use super::{TaskKind, observation_vector};
 
@@ -163,5 +174,43 @@ mod tests {
         let observations = observation_vector(&simulation.snapshot(), &genome.body);
 
         assert_eq!(observations.len(), genome.brain.input_count);
+    }
+
+    #[test]
+    fn observation_vector_uses_actuated_joint_slots() {
+        let mut body = crate::BodyGenome::seed_quadruped();
+        body.nodes[1].actuator_strength = 0.0;
+        let snapshot = Snapshot {
+            time: 0.0,
+            root_position: Vec2::ZERO,
+            root_velocity: Vec2::ZERO,
+            tilt: 0.0,
+            angular_velocity: 0.0,
+            energy_spent: 0.0,
+            terrain_height: 0.0,
+            terrain_slope: 0.0,
+            joints: vec![
+                test_joint(1, Attachment::Left, 10.0),
+                test_joint(2, Attachment::Right, 20.0),
+            ],
+        };
+
+        let observations = observation_vector(&snapshot, &body);
+
+        assert_eq!(observations.len(), crate::genome::sensor_count(&body));
+        assert_eq!(observations[12], 20.0);
+    }
+
+    fn test_joint(node_id: usize, attachment: Attachment, angle: f32) -> JointState {
+        JointState {
+            node_id,
+            attachment,
+            anchor: JointAnchor {
+                parent_anchor: Vec2::ZERO,
+                child_anchor: Vec2::ZERO,
+            },
+            angle,
+            angular_velocity: 0.0,
+        }
     }
 }

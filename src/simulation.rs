@@ -144,13 +144,20 @@ impl Simulation {
         let mut thrust = 0.0;
         let mut lift = 0.0;
         let mut torque = 0.0;
-        for (action_index, joint) in creature.joints.iter_mut().enumerate() {
-            let action = actions
-                .get(action_index)
-                .copied()
-                .unwrap_or(0.0)
-                .clamp(-1.0, 1.0);
+        let mut action_index = 0;
+        for joint in &mut creature.joints {
             let node = &genome.body.nodes[joint.node_id];
+            let action = if node.is_actuated() {
+                let action = actions
+                    .get(action_index)
+                    .copied()
+                    .unwrap_or(0.0)
+                    .clamp(-1.0, 1.0);
+                action_index += 1;
+                action
+            } else {
+                0.0
+            };
             let target_velocity = action * node.actuator_strength * 3.0;
             joint.angular_velocity += (target_velocity - joint.angular_velocity) * 0.35;
             joint.angle = (joint.angle + joint.angular_velocity * dt).clamp(-1.4, 1.4);
@@ -158,7 +165,7 @@ impl Simulation {
             let normal = joint.attachment.normal();
             thrust += action * node.actuator_strength * normal.x.abs().max(0.35);
             lift += action.abs() * node.actuator_strength * normal.y.max(0.0) * 0.12;
-            torque += action * normal.y * 0.05;
+            torque += action * node.actuator_strength * normal.y * 0.05;
             creature.energy_spent += action.abs() * node.actuator_strength * dt;
         }
 
@@ -252,5 +259,23 @@ mod tests {
 
         sim.spawn_creature(&mutated.body);
         assert_eq!(sim.creature_body_count(), mutated.body.body_count());
+    }
+
+    #[test]
+    fn actions_are_consumed_by_actuated_joints_only() {
+        let mut rng = Rng::new(5);
+        let mut genome = Genome::minimal(ControllerKind::FeedForward, &mut rng);
+        for node in &mut genome.body.nodes[1..4] {
+            node.actuator_strength = 0.0;
+        }
+        genome.body.nodes[4].actuator_strength = 1.0;
+
+        let mut sim = Simulation::new(World::flat());
+        sim.spawn_creature(&genome.body);
+        sim.step(&genome, &[1.0], 0.05);
+
+        let snapshot = sim.snapshot();
+        assert!(snapshot.root_position.x > 0.0);
+        assert!(snapshot.energy_spent > 0.0);
     }
 }

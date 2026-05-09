@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::fitness::{Evaluation, TaskKind, evaluate};
 use crate::genome::Genome;
 use crate::policy::ControllerKind;
@@ -37,6 +39,42 @@ impl Default for EvolutionConfig {
     }
 }
 
+impl EvolutionConfig {
+    pub fn validate(&self) -> Result<(), EvolutionConfigError> {
+        if self.population_size == 0 {
+            return Err(EvolutionConfigError::new(
+                "population must be greater than zero",
+            ));
+        }
+        if self.archive_width == 0 || self.archive_height == 0 {
+            return Err(EvolutionConfigError::new(
+                "archive width and height must be greater than zero",
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvolutionConfigError {
+    message: &'static str,
+}
+
+impl EvolutionConfigError {
+    fn new(message: &'static str) -> Self {
+        Self { message }
+    }
+}
+
+impl fmt::Display for EvolutionConfigError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.message)
+    }
+}
+
+impl std::error::Error for EvolutionConfigError {}
+
 #[derive(Clone, Debug)]
 pub struct EvolutionReport {
     pub best_genome: Genome,
@@ -45,7 +83,9 @@ pub struct EvolutionReport {
     pub generations: usize,
 }
 
-pub fn run_evolution(config: EvolutionConfig) -> EvolutionReport {
+pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, EvolutionConfigError> {
+    config.validate()?;
+
     let mut rng = Rng::new(config.seed);
     let mut population: Vec<Genome> = (0..config.population_size)
         .map(|index| {
@@ -108,12 +148,12 @@ pub fn run_evolution(config: EvolutionConfig) -> EvolutionReport {
         population = next_population;
     }
 
-    EvolutionReport {
+    Ok(EvolutionReport {
         best_genome,
         best_evaluation,
         archive,
         generations: config.generations,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -128,9 +168,21 @@ mod tests {
             evaluation_steps: 20,
             search_mode: SearchMode::MapElites,
             ..EvolutionConfig::default()
-        });
+        })
+        .expect("valid config should run");
 
         assert!(report.archive.occupied_count() > 0);
         assert!(report.best_evaluation.fitness.is_finite());
+    }
+
+    #[test]
+    fn evolution_rejects_zero_population() {
+        let error = run_evolution(EvolutionConfig {
+            population_size: 0,
+            ..EvolutionConfig::default()
+        })
+        .expect_err("zero population should be rejected");
+
+        assert_eq!(error.to_string(), "population must be greater than zero");
     }
 }

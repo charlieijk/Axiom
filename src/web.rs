@@ -576,4 +576,11 @@ mod tests {
 
         assert!(result.is_err());
     }
+
+    #[test]
+    fn port_probe_handles_upper_port_bound() {
+        let result = bind_first_available("not-a-real-host.invalid", u16::MAX);
+
+        assert!(result.is_err());
+    }
 }

@@ -9,7 +9,8 @@ fn main() {
         task: TaskKind::RoughTerrain,
         search_mode: SearchMode::MapElites,
         ..EvolutionConfig::default()
-    });
+    })
+    .expect("benchmark config should be valid");
 
     println!("best fitness: {:.3}", report.best_evaluation.fitness);
     println!(

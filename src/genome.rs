@@ -145,6 +145,10 @@ impl BodyGenome {
         self.nodes.iter().filter(|node| node.is_actuated()).count()
     }
 
+    pub fn actuated_nodes(&self) -> impl Iterator<Item = &BodyNode> {
+        self.nodes.iter().filter(|node| node.is_actuated())
+    }
+
     pub fn output_count(&self) -> usize {
         self.actuator_count().max(1)
     }
@@ -202,7 +206,11 @@ pub struct Genome {
 impl Genome {
     pub fn minimal(controller: ControllerKind, rng: &mut Rng) -> Self {
         let body = BodyGenome::seed_quadruped();
-        let brain = NeuralGenome::minimal(sensor_count(&body), body.output_count(), rng);
+        let brain = NeuralGenome::minimal(
+            controller_input_count(&body, controller),
+            body.output_count(),
+            rng,
+        );
         Self {
             body,
             brain,
@@ -215,13 +223,6 @@ impl Genome {
         next.body.mutate(rng);
         next.brain.mutate_weights(rng, 0.35, 0.25);
 
-        if next.brain.output_count != next.body.output_count()
-            || next.brain.input_count != sensor_count(&next.body)
-        {
-            next.brain =
-                NeuralGenome::minimal(sensor_count(&next.body), next.body.output_count(), rng);
-        }
-
         if rng.chance(0.04) {
             next.controller = match rng.range_usize(3) {
                 0 => ControllerKind::FeedForward,
@@ -230,10 +231,50 @@ impl Genome {
             };
         }
 
+        if next.brain.output_count != next.body.output_count()
+            || next.brain.input_count != controller_input_count(&next.body, next.controller)
+        {
+            next.brain = NeuralGenome::minimal(
+                controller_input_count(&next.body, next.controller),
+                next.body.output_count(),
+                rng,
+            );
+        }
+
         next
     }
 }
 
 pub fn sensor_count(body: &BodyGenome) -> usize {
     12 + body.actuator_count() * 2 + body.body_count() * 2
+}
+
+pub fn controller_input_count(body: &BodyGenome, controller: ControllerKind) -> usize {
+    let base = sensor_count(body);
+    if controller == ControllerKind::Recurrent {
+        base + body.output_count()
+    } else {
+        base
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Genome, controller_input_count, sensor_count};
+    use crate::{policy::ControllerKind, rng::Rng};
+
+    #[test]
+    fn recurrent_genomes_reserve_inputs_for_prior_outputs() {
+        let mut rng = Rng::new(31);
+        let genome = Genome::minimal(ControllerKind::Recurrent, &mut rng);
+
+        assert_eq!(
+            genome.brain.input_count,
+            sensor_count(&genome.body) + genome.body.output_count()
+        );
+        assert_eq!(
+            genome.brain.input_count,
+            controller_input_count(&genome.body, genome.controller)
+        );
+    }
 }
