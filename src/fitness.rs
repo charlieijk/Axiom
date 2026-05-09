@@ -12,8 +12,11 @@ pub enum TaskKind {
 #[derive(Clone, Debug, Default)]
 pub struct Metrics {
     pub distance: f32,
+    pub stable_distance: f32,
     pub jump_height: f32,
     pub uprightness: f32,
+    pub stability: f32,
+    pub terminal_tilt: f32,
     pub body_count: f32,
     pub actuator_count: f32,
     pub energy: f32,
@@ -47,6 +50,7 @@ pub fn evaluate(genome: &Genome, task: TaskKind, steps: usize) -> Evaluation {
     let mut brain_state = brain.reset_state();
     let mut max_height = 0.0_f32;
     let mut upright_accumulator = 0.0_f32;
+    let mut angular_control_accumulator = 0.0_f32;
 
     for step in 0..steps {
         if task == TaskKind::Recovery && step == 0 {
@@ -60,17 +64,26 @@ pub fn evaluate(genome: &Genome, task: TaskKind, steps: usize) -> Evaluation {
 
         let next = simulation.snapshot();
         max_height = max_height.max(next.root_position.y - next.terrain_height);
-        upright_accumulator += (1.0 - next.tilt.abs() / 1.5).clamp(0.0, 1.0);
+        upright_accumulator += tilt_stability(next.tilt);
+        angular_control_accumulator += (1.0 - next.angular_velocity.abs() / 3.0).clamp(0.0, 1.0);
     }
 
     let snapshot = simulation.snapshot();
     let distance = snapshot.root_position.x.max(0.0);
     let uprightness = upright_accumulator / steps.max(1) as f32;
+    let angular_control = angular_control_accumulator / steps.max(1) as f32;
+    let terminal_stability = tilt_stability(snapshot.tilt);
+    let stability =
+        (uprightness * 0.56 + terminal_stability * 0.32 + angular_control * 0.12).clamp(0.0, 1.0);
+    let stable_distance = distance * stability;
     let energy = snapshot.energy_spent;
     let metrics = Metrics {
         distance,
+        stable_distance,
         jump_height: max_height,
         uprightness,
+        stability,
+        terminal_tilt: snapshot.tilt.abs(),
         body_count: genome.body.body_count() as f32,
         actuator_count: genome.body.actuator_count() as f32,
         energy,
@@ -81,15 +94,26 @@ pub fn evaluate(genome: &Genome, task: TaskKind, steps: usize) -> Evaluation {
         TaskKind::RoughTerrain => 1.25,
         TaskKind::Recovery => 1.15,
     };
-    let fitness = distance * 10.0 * terrain_multiplier + uprightness * 5.0 + max_height * 1.5
-        - energy * 0.06
-        - metrics.body_count * 0.03;
+    let controlled_distance = stable_distance * 11.0 * terrain_multiplier;
+    let raw_progress = distance * 1.4 * terrain_multiplier;
+    let posture_score = uprightness * 8.0 + terminal_stability * 12.0 + stability * 10.0;
+    let hop_score = max_height.clamp(0.0, 0.85) * 0.7;
+    let tumble_penalty =
+        (1.0 - terminal_stability).powi(2) * 18.0 + (1.0 - stability).powi(2) * 8.0;
+    let fitness = controlled_distance + raw_progress + posture_score + hop_score
+        - tumble_penalty
+        - energy * 0.08
+        - metrics.body_count * 0.04;
 
     Evaluation {
         fitness,
         metrics,
         steps,
     }
+}
+
+fn tilt_stability(tilt: f32) -> f32 {
+    (1.0 - tilt.abs() / 1.5).clamp(0.0, 1.0)
 }
 
 pub fn observation_vector(snapshot: &Snapshot, body: &BodyGenome) -> Vec<f32> {

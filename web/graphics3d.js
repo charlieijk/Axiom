@@ -15,10 +15,14 @@ const ui = {
 };
 
 const replayRequest = {
+  mode: "evolved",
   controller: "cpg",
   task: "rough",
   seed: 29,
-  frames: 420,
+  frames: 520,
+  generations: 12,
+  population: 28,
+  evaluation_steps: 180,
 };
 
 const state = {
@@ -94,27 +98,35 @@ function start(THREE) {
   }
 
   async function fetchReplay() {
-    ui.fieldNote.textContent = "Syncing replay data.";
-    const query = new URLSearchParams(replayRequest);
-    const response = await fetch(`/api/replay?${query.toString()}`);
-    if (!response.ok) {
-      throw new Error(`Replay request failed: ${response.status}`);
+    const evolving = replayRequest.mode === "evolved";
+    ui.fieldNote.textContent = evolving
+      ? `Evolving ${replayRequest.population} candidates for ${replayRequest.generations} generations.`
+      : "Syncing replay data.";
+    ui.reroll.disabled = true;
+    try {
+      const query = new URLSearchParams(replayRequest);
+      const response = await fetch(`/api/replay?${query.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Replay request failed: ${response.status}`);
+      }
+
+      state.replay = await response.json();
+      state.frameIndex = 0;
+      state.accumulator = 0;
+      state.playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      updateActionButtons();
+      ui.runLabel.textContent = replayRunLabel(state.replay);
+      ui.fieldNote.textContent = replayFieldNote(state.replay);
+
+      scene.remove(terrain.mesh);
+      terrain.dispose();
+      terrain = createTerrain(THREE, state.replay.task);
+      scene.add(terrain.mesh);
+      creature.rebuild(state.replay.body);
+      updateMetrics();
+    } finally {
+      ui.reroll.disabled = false;
     }
-
-    state.replay = await response.json();
-    state.frameIndex = 0;
-    state.accumulator = 0;
-    state.playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    updateActionButtons();
-    ui.runLabel.textContent = `${labelFor(state.replay.controller)} / ${labelFor(state.replay.task)} / seed ${state.replay.seed}`;
-    ui.fieldNote.textContent = `${state.replay.body.length} body parts, ${Math.max(0, state.replay.body.length - 1)} joints, lit as a follow-camera 3D replay.`;
-
-    scene.remove(terrain.mesh);
-    terrain.dispose();
-    terrain = createTerrain(THREE, state.replay.task);
-    scene.add(terrain.mesh);
-    creature.rebuild(state.replay.body);
-    updateMetrics();
   }
 
   function frameStep(deltaMs) {
@@ -171,6 +183,11 @@ function start(THREE) {
       ready: Boolean(window.__AXIOM_3D_READY__),
       frame: state.frameIndex,
       bodies: state.replay ? state.replay.body.length : 0,
+      source: state.replay ? state.replay.source : null,
+      fitness: state.replay ? state.replay.fitness : null,
+      bestDistance: state.replay ? state.replay.best_distance : null,
+      stableDistance: state.replay ? state.replay.stable_distance : null,
+      stability: state.replay ? state.replay.stability : null,
       cameraMode: state.cameraMode,
       effectsEnabled: state.effectsEnabled,
       width: canvas.width,
@@ -201,7 +218,7 @@ function createSceneParts(THREE, scene) {
   const creatureLight = new THREE.PointLight("#8eea9f", 1.8, 7, 1.8);
   scene.add(creatureLight);
 
-  const grid = new THREE.GridHelper(72, 72, "#4f725c", "#26372f");
+  const grid = new THREE.GridHelper(128, 128, "#4f725c", "#26372f");
   grid.position.y = 0.018;
   grid.material.transparent = true;
   grid.material.opacity = 0.28;
@@ -417,11 +434,11 @@ function createSkyDome(THREE) {
 }
 
 function createTerrain(THREE, task) {
-  const width = 74;
-  const depth = 16;
-  const xSegments = 148;
+  const width = 150;
+  const depth = 20;
+  const xSegments = 240;
   const zSegments = 28;
-  const xStart = -8;
+  const xStart = -34;
   const positions = [];
   const indices = [];
 
@@ -773,6 +790,7 @@ function bindActions(fetchReplay) {
 
 function updateActionButtons() {
   ui.playToggle.textContent = state.playing ? "Pause" : "Play";
+  ui.reroll.textContent = replayRequest.mode === "evolved" ? "Evolve" : "Reroll";
   ui.cameraMode.textContent = CAMERA_LABELS[state.cameraMode];
   ui.fxToggle.textContent = state.effectsEnabled ? "Full FX" : "Lite FX";
   ui.cameraMode.classList.toggle("is-active", state.cameraMode !== "follow");
@@ -814,6 +832,24 @@ function labelFor(value) {
     .filter(Boolean)
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function replayRunLabel(replay) {
+  const generationLabel =
+    replay.source === "evolved" ? `gen ${replay.generations}` : replay.source || "minimal";
+  return `${labelFor(replay.controller)} / ${labelFor(replay.task)} / ${generationLabel} / seed ${replay.seed}`;
+}
+
+function replayFieldNote(replay) {
+  const bodyText = `${replay.body.length} body parts and ${Math.max(0, replay.body.length - 1)} joints`;
+  if (replay.source !== "evolved") {
+    return `${bodyText}, replaying a seed genome across rough terrain.`;
+  }
+  return `Evolved ${replay.population} candidates over ${replay.generations} generations. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
+}
+
+function formatMetric(value, digits) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "--";
 }
 
 function clamp(value, min, max) {

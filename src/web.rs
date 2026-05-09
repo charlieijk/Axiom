@@ -4,7 +4,10 @@ use std::{
     net::{SocketAddr, TcpListener, TcpStream},
 };
 
-use crate::{Genome, TaskKind, animation::capture_replay, policy::ControllerKind, rng::Rng};
+use crate::{
+    EvolutionConfig, Genome, SearchMode, TaskKind, animation::capture_replay, evaluate,
+    policy::ControllerKind, rng::Rng, run_evolution,
+};
 
 const INDEX_HTML: &str = include_str!("../web/index.html");
 const APP_CSS: &str = include_str!("../web/styles.css");
@@ -32,21 +35,44 @@ impl Default for GuiConfig {
 
 #[derive(Clone, Copy, Debug)]
 struct ReplayRequest {
+    mode: ReplayMode,
     controller: ControllerKind,
     task: TaskKind,
     seed: u64,
     frames: usize,
     dt: f32,
+    generations: usize,
+    population_size: usize,
+    evaluation_steps: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ReplayMode {
+    Minimal,
+    Evolved,
+}
+
+impl ReplayMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Minimal => "minimal",
+            Self::Evolved => "evolved",
+        }
+    }
 }
 
 impl Default for ReplayRequest {
     fn default() -> Self {
         Self {
+            mode: ReplayMode::Minimal,
             controller: ControllerKind::Cpg,
             task: TaskKind::RoughTerrain,
             seed: 19,
             frames: 220,
             dt: 0.05,
+            generations: 12,
+            population_size: 28,
+            evaluation_steps: 180,
         }
     }
 }
@@ -182,6 +208,11 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
         let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
         let value = url_decode(value);
         match key {
+            "mode" | "source" => {
+                if let Some(mode) = parse_replay_mode(&value) {
+                    request.mode = mode;
+                }
+            }
             "controller" => {
                 if let Some(controller) = parse_controller(&value) {
                     request.controller = controller;
@@ -202,6 +233,21 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
                     request.frames = frames.clamp(1, 900);
                 }
             }
+            "generations" => {
+                if let Ok(generations) = value.parse::<usize>() {
+                    request.generations = generations.clamp(1, 40);
+                }
+            }
+            "population" | "population_size" => {
+                if let Ok(population_size) = value.parse::<usize>() {
+                    request.population_size = population_size.clamp(4, 96);
+                }
+            }
+            "evaluation_steps" | "evolve_steps" => {
+                if let Ok(evaluation_steps) = value.parse::<usize>() {
+                    request.evaluation_steps = evaluation_steps.clamp(20, 500);
+                }
+            }
             _ => {}
         }
     }
@@ -210,17 +256,50 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
 }
 
 fn replay_json(request: ReplayRequest) -> String {
-    let mut rng = Rng::new(request.seed);
-    let genome = Genome::minimal(request.controller, &mut rng);
+    let (genome, evaluation, generations, population_size) = match request.mode {
+        ReplayMode::Minimal => {
+            let mut rng = Rng::new(request.seed);
+            let genome = Genome::minimal(request.controller, &mut rng);
+            let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
+            (genome, evaluation, 0, 1)
+        }
+        ReplayMode::Evolved => {
+            let report = run_evolution(EvolutionConfig {
+                seed: request.seed,
+                population_size: request.population_size,
+                generations: request.generations,
+                evaluation_steps: request.evaluation_steps,
+                task: request.task,
+                search_mode: SearchMode::MapElites,
+                ..EvolutionConfig::default()
+            });
+            (
+                report.best_genome,
+                report.best_evaluation,
+                request.generations,
+                request.population_size,
+            )
+        }
+    };
     let frames = capture_replay(&genome, request.task, request.frames, request.dt);
     let mut json = String::new();
 
     write!(
         json,
-        "{{\"controller\":\"{}\",\"task\":\"{}\",\"seed\":{},\"dt\":{},\"body\":[",
-        request.controller.as_str(),
+        "{{\"controller\":\"{}\",\"task\":\"{}\",\"seed\":{},\"source\":\"{}\",\"generations\":{},\"population\":{},\"evaluation_steps\":{},\"fitness\":{:.4},\"best_distance\":{:.4},\"stable_distance\":{:.4},\"uprightness\":{:.4},\"stability\":{:.4},\"terminal_tilt\":{:.4},\"dt\":{},\"body\":[",
+        genome.controller.as_str(),
         task_name(request.task),
         request.seed,
+        request.mode.as_str(),
+        generations,
+        population_size,
+        request.evaluation_steps,
+        evaluation.fitness,
+        evaluation.metrics.distance,
+        evaluation.metrics.stable_distance,
+        evaluation.metrics.uprightness,
+        evaluation.metrics.stability,
+        evaluation.metrics.terminal_tilt,
         request.dt
     )
     .expect("writing to a String cannot fail");
@@ -279,6 +358,14 @@ fn replay_json(request: ReplayRequest) -> String {
     }
     json.push_str("]}");
     json
+}
+
+fn parse_replay_mode(value: &str) -> Option<ReplayMode> {
+    match value {
+        "minimal" | "seed" | "raw" => Some(ReplayMode::Minimal),
+        "evolved" | "evolve" | "champion" => Some(ReplayMode::Evolved),
+        _ => None,
+    }
 }
 
 fn parse_controller(value: &str) -> Option<ControllerKind> {

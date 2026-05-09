@@ -35,11 +35,11 @@ fn demo() {
         let genome = axiom::Genome::minimal(controller, &mut rng);
         let evaluation = evaluate(&genome, TaskKind::RoughTerrain, 180);
         println!(
-            "{:<11} fitness={:>7.3} distance={:>6.3} jump={:>5.3} upright={:>5.3}",
+            "{:<11} fitness={:>7.3} distance={:>6.3} stable={:>6.3} upright={:>5.3}",
             controller.as_str(),
             evaluation.fitness,
             evaluation.metrics.distance,
-            evaluation.metrics.jump_height,
+            evaluation.metrics.stability,
             evaluation.metrics.uprightness
         );
     }
@@ -59,8 +59,11 @@ fn evaluate_once(controller: Option<&str>) {
     println!("controller: {}", kind.as_str());
     println!("fitness:    {:.3}", evaluation.fitness);
     println!("distance:   {:.3}", evaluation.metrics.distance);
+    println!("stable dst: {:.3}", evaluation.metrics.stable_distance);
     println!("jump:       {:.3}", evaluation.metrics.jump_height);
     println!("upright:    {:.3}", evaluation.metrics.uprightness);
+    println!("stability:  {:.3}", evaluation.metrics.stability);
+    println!("end tilt:   {:.3}", evaluation.metrics.terminal_tilt);
     println!("body parts: {:.0}", evaluation.metrics.body_count);
     println!("actuators:  {:.0}", evaluation.metrics.actuator_count);
 }
@@ -99,6 +102,14 @@ fn evolve(args: Vec<String>) {
     println!(
         "best distance: {:.3}",
         report.best_evaluation.metrics.distance
+    );
+    println!(
+        "best stable distance: {:.3}",
+        report.best_evaluation.metrics.stable_distance
+    );
+    println!(
+        "best stability: {:.3}",
+        report.best_evaluation.metrics.stability
     );
     println!(
         "best controller: {}",
