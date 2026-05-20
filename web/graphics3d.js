@@ -6,8 +6,10 @@ const ui = {
   reroll: document.getElementById("reroll"),
   cameraMode: document.getElementById("camera-mode"),
   fxToggle: document.getElementById("fx-toggle"),
+  objectiveTitle: document.getElementById("objective-title"),
   runLabel: document.getElementById("run-label"),
   fieldNote: document.getElementById("field-note"),
+  returnLink: document.getElementById("return-link"),
   hint: document.getElementById("control-hint"),
   time: document.getElementById("metric-time"),
   distance: document.getElementById("metric-distance"),
@@ -32,10 +34,13 @@ if (pageParams.has("run") && pageParams.has("cell")) {
   replayRequest.frames = Number(pageParams.get("frames") || replayRequest.frames);
 }
 
+applyInitialReplayContext();
+
 const state = {
   replay: null,
   frameIndex: 0,
   accumulator: 0,
+  loading: false,
   playing: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   lastTime: performance.now(),
   orbitYaw: 0,
@@ -47,6 +52,9 @@ const state = {
   effectsEnabled: true,
   hintFaded: false,
 };
+
+window.__AXIOM_3D_READY__ = false;
+window.render_game_to_text = () => renderReplayDebugState();
 
 const Y_AXIS = { x: 0, y: 1, z: 0 };
 const CAMERA_MODES = ["follow", "orbit", "showcase"];
@@ -105,28 +113,31 @@ function start(THREE) {
   }
 
   async function fetchReplay() {
-    const archiveReplay = Boolean(replayRequest.run && replayRequest.cell);
-    const evolving = replayRequest.mode === "evolved" && !archiveReplay;
-    ui.fieldNote.textContent = evolving
-      ? `Evolving ${replayRequest.population} candidates for ${replayRequest.generations} generations.`
-      : archiveReplay
-        ? `Loading archive cell ${replayRequest.cell}.`
-        : "Syncing replay data.";
-    ui.reroll.disabled = true;
+    state.loading = true;
+    ui.fieldNote.textContent = loadingFieldNote();
+    updateActionButtons();
     try {
       const query = new URLSearchParams(replayRequest);
       const response = await fetch(`/api/replay?${query.toString()}`);
       if (!response.ok) {
-        throw new Error(`Replay request failed: ${response.status}`);
+        let message = `Replay request failed: ${response.status}`;
+        try {
+          const error = await response.json();
+          if (error && error.error) {
+            message = error.error;
+          }
+        } catch (_) {
+          // Keep the status-based fallback when the server does not return JSON.
+        }
+        throw new Error(message);
       }
 
       state.replay = await response.json();
+      window.__AXIOM_3D_READY__ = true;
       state.frameIndex = 0;
       state.accumulator = 0;
       state.playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      updateActionButtons();
-      ui.runLabel.textContent = replayRunLabel(state.replay);
-      ui.fieldNote.textContent = replayFieldNote(state.replay);
+      applyLoadedReplayContext(state.replay);
 
       scene.remove(terrain.mesh);
       terrain.dispose();
@@ -135,7 +146,8 @@ function start(THREE) {
       creature.rebuild(state.replay.body);
       updateMetrics();
     } finally {
-      ui.reroll.disabled = false;
+      state.loading = false;
+      updateActionButtons();
     }
   }
 
@@ -183,26 +195,31 @@ function start(THREE) {
   bindActions(fetchReplay);
   resize();
   fetchReplay().catch((error) => {
-    ui.fieldNote.textContent = "Replay data failed to load.";
+    ui.fieldNote.textContent = replayRequestIsArchive()
+      ? `Archive replay failed for run ${replayRequest.run}, cell ${formatCell(replayRequest.cell)}: ${error.message}`
+      : "Replay data failed to load.";
     console.error(error);
   });
   renderer.setAnimationLoop(renderLoop);
 
-  window.render_game_to_text = () =>
-    JSON.stringify({
-      ready: Boolean(window.__AXIOM_3D_READY__),
-      frame: state.frameIndex,
-      bodies: state.replay ? state.replay.body.length : 0,
-      source: state.replay ? state.replay.source : null,
-      fitness: state.replay ? state.replay.fitness : null,
-      bestDistance: state.replay ? state.replay.best_distance : null,
-      stableDistance: state.replay ? state.replay.stable_distance : null,
-      stability: state.replay ? state.replay.stability : null,
-      cameraMode: state.cameraMode,
-      effectsEnabled: state.effectsEnabled,
-      width: canvas.width,
-      height: canvas.height,
-    });
+  window.render_game_to_text = () => renderReplayDebugState();
+}
+
+function renderReplayDebugState() {
+  return JSON.stringify({
+    ready: Boolean(window.__AXIOM_3D_READY__),
+    frame: state.frameIndex,
+    bodies: state.replay ? state.replay.body.length : 0,
+    source: state.replay ? state.replay.source : null,
+    fitness: state.replay ? state.replay.fitness : null,
+    bestDistance: state.replay ? state.replay.best_distance : null,
+    stableDistance: state.replay ? state.replay.stable_distance : null,
+    stability: state.replay ? state.replay.stability : null,
+    cameraMode: state.cameraMode,
+    effectsEnabled: state.effectsEnabled,
+    width: canvas.width,
+    height: canvas.height,
+  });
 }
 
 function createSceneParts(THREE, scene) {
@@ -498,9 +515,16 @@ function createCreatureRenderer(THREE, scene) {
   scene.add(group);
   scene.add(ghostGroup);
 
-  const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const jointGeometry = new THREE.CylinderGeometry(0.045, 0.045, 1, 16);
-  const actuatorGeometry = new THREE.SphereGeometry(0.1, 18, 12);
+  const hullGeometry = new THREE.SphereGeometry(0.5, 32, 18);
+  const plateGeometry = new THREE.BoxGeometry(0.58, 0.17, 0.08);
+  const railGeometry = new THREE.CylinderGeometry(0.018, 0.018, 1, 10);
+  const sensorGeometry = new THREE.SphereGeometry(0.045, 14, 10);
+  const jointStrutGeometry = new THREE.CylinderGeometry(0.035, 0.035, 1, 14);
+  const jointRingGeometry = new THREE.TorusGeometry(0.13, 0.017, 8, 36);
+  const jointPivotGeometry = new THREE.SphereGeometry(0.052, 14, 10);
+  const actuatorPodGeometry = new THREE.SphereGeometry(0.13, 20, 14);
+  const actuatorRingGeometry = new THREE.TorusGeometry(0.18, 0.014, 8, 36);
+  const actuatorCoilGeometry = new THREE.CylinderGeometry(0.013, 0.013, 0.34, 8);
   const rootMaterial = new THREE.MeshStandardMaterial({
     color: "#edf5e9",
     emissive: "#3f6d46",
@@ -514,6 +538,20 @@ function createCreatureRenderer(THREE, scene) {
     emissiveIntensity: 0.2,
     roughness: 0.46,
     metalness: 0.24,
+  });
+  const plateMaterial = new THREE.MeshStandardMaterial({
+    color: "#d7e8d5",
+    emissive: "#1e4528",
+    emissiveIntensity: 0.08,
+    roughness: 0.5,
+    metalness: 0.34,
+  });
+  const armorMaterial = new THREE.MeshStandardMaterial({
+    color: "#18231c",
+    emissive: "#0b1a10",
+    emissiveIntensity: 0.16,
+    roughness: 0.56,
+    metalness: 0.46,
   });
   const jointMaterial = new THREE.MeshStandardMaterial({
     color: "#e8c46f",
@@ -529,6 +567,13 @@ function createCreatureRenderer(THREE, scene) {
     roughness: 0.3,
     metalness: 0.1,
   });
+  const sensorMaterial = new THREE.MeshStandardMaterial({
+    color: "#a9f1b5",
+    emissive: "#52d86b",
+    emissiveIntensity: 1.2,
+    roughness: 0.22,
+    metalness: 0.1,
+  });
   const ghostMaterials = [0.18, 0.11, 0.06].map(
     (opacity) =>
       new THREE.MeshBasicMaterial({
@@ -540,9 +585,9 @@ function createCreatureRenderer(THREE, scene) {
       }),
   );
 
-  const bodyMeshes = [];
-  const actuatorMeshes = [];
-  const jointMeshes = [];
+  const bodyModules = [];
+  const actuatorModules = [];
+  const jointModules = [];
   const ghostMeshes = [];
   const ghostSnapshots = [];
   let ghostAccumulator = 0;
@@ -554,15 +599,15 @@ function createCreatureRenderer(THREE, scene) {
   const scratchDirection = new THREE.Vector3();
 
   function clearMeshes() {
-    for (const mesh of [...bodyMeshes, ...actuatorMeshes, ...jointMeshes]) {
-      group.remove(mesh);
+    for (const module of [...bodyModules, ...actuatorModules, ...jointModules]) {
+      group.remove(module);
     }
     for (const mesh of ghostMeshes.flat()) {
       ghostGroup.remove(mesh);
     }
-    bodyMeshes.length = 0;
-    actuatorMeshes.length = 0;
-    jointMeshes.length = 0;
+    bodyModules.length = 0;
+    actuatorModules.length = 0;
+    jointModules.length = 0;
     ghostMeshes.length = 0;
     ghostSnapshots.length = 0;
     ghostAccumulator = 0;
@@ -571,29 +616,25 @@ function createCreatureRenderer(THREE, scene) {
   function rebuild(body) {
     clearMeshes();
     for (let index = 0; index < body.length; index += 1) {
-      const mesh = new THREE.Mesh(boxGeometry, index === 0 ? rootMaterial : limbMaterial);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      group.add(mesh);
-      bodyMeshes.push(mesh);
+      const module = createBioMechBodyModule(index);
+      group.add(module);
+      bodyModules.push(module);
 
-      const actuator = new THREE.Mesh(actuatorGeometry, actuatorMaterial);
-      actuator.castShadow = true;
+      const actuator = createBioMechActuatorModule();
       group.add(actuator);
-      actuatorMeshes.push(actuator);
+      actuatorModules.push(actuator);
     }
 
     for (let index = 0; index < Math.max(0, body.length - 1); index += 1) {
-      const joint = new THREE.Mesh(jointGeometry, jointMaterial);
-      joint.castShadow = true;
+      const joint = createBioMechJointModule();
       group.add(joint);
-      jointMeshes.push(joint);
+      jointModules.push(joint);
     }
 
     for (let layer = 0; layer < ghostMaterials.length; layer += 1) {
       const layerMeshes = [];
       for (let index = 0; index < body.length; index += 1) {
-        const ghost = new THREE.Mesh(boxGeometry, ghostMaterials[layer]);
+        const ghost = new THREE.Mesh(hullGeometry, ghostMaterials[layer]);
         ghost.visible = false;
         ghostGroup.add(ghost);
         layerMeshes.push(ghost);
@@ -603,14 +644,14 @@ function createCreatureRenderer(THREE, scene) {
   }
 
   function captureGhostSnapshot() {
-    if (!state.effectsEnabled || bodyMeshes.length === 0) {
+    if (!state.effectsEnabled || bodyModules.length === 0) {
       return;
     }
     ghostSnapshots.push(
-      bodyMeshes.map((mesh) => ({
-        position: mesh.position.clone(),
-        rotation: mesh.rotation.clone(),
-        scale: mesh.scale.clone(),
+      bodyModules.map((module) => ({
+        position: module.position.clone(),
+        rotation: module.rotation.clone(),
+        scale: module.scale.clone(),
       })),
     );
     while (ghostSnapshots.length > 12) {
@@ -649,23 +690,31 @@ function createCreatureRenderer(THREE, scene) {
       const depth = index === 0 ? 0.58 : 0.42;
       const scaleX = Math.max(0.34, node.size[0] * 1.25);
       const scaleY = Math.max(0.22, node.size[1] * 1.25);
-      const mesh = bodyMeshes[index];
-      mesh.position.set(center[0], center[1] + 0.46, 0);
-      mesh.rotation.set(Math.sin(frame.time + index) * 0.035, 0, angle);
-      mesh.scale.set(scaleX, scaleY, depth);
+      const module = bodyModules[index];
+      module.position.set(center[0], center[1] + 0.46, 0);
+      module.rotation.set(Math.sin(frame.time + index) * 0.035, 0, angle);
+      module.scale.set(scaleX, scaleY, depth);
+      updateBioMechBodyModule(module, index, frame.time);
 
-      const actuator = actuatorMeshes[index];
+      const actuator = actuatorModules[index];
       actuator.visible = node.actuator > 0.01;
       if (actuator.visible) {
-        scratchOffset.set(scaleX * 0.36, 0, depth * 0.56);
+        const pulse = 0.86 + Math.sin(frame.time * 8 + index * 0.7) * 0.16;
+        scratchOffset.set(scaleX * 0.38, 0, depth * 0.7);
         scratchOffset.applyAxisAngle(scratchZAxis, angle);
-        actuator.position.set(center[0] + scratchOffset.x, center[1] + 0.46 + scratchOffset.y, scratchOffset.z);
-        actuator.scale.setScalar(0.75 + Math.sin(frame.time * 8 + index) * 0.12);
+        actuator.position.set(
+          center[0] + scratchOffset.x,
+          center[1] + 0.46 + scratchOffset.y,
+          scratchOffset.z,
+        );
+        actuator.rotation.set(0, 0, angle);
+        actuator.scale.setScalar(Math.max(0.78, scaleY * 1.1) * pulse);
+        updateBioMechActuatorModule(actuator, pulse);
       }
     }
 
-    for (let index = 0; index < jointMeshes.length; index += 1) {
-      const joint = jointMeshes[index];
+    for (let index = 0; index < jointModules.length; index += 1) {
+      const joint = jointModules[index];
       const segment = frame.joints[index];
       if (!segment) {
         joint.visible = false;
@@ -680,8 +729,8 @@ function createCreatureRenderer(THREE, scene) {
         continue;
       }
       joint.position.copy(scratchStart).add(scratchEnd).multiplyScalar(0.5);
-      joint.scale.set(1, length, 1);
       joint.quaternion.setFromUnitVectors(yAxis, scratchDirection.normalize());
+      updateBioMechJointModule(joint, length, frame.time, index);
     }
 
     ghostAccumulator += deltaSeconds;
@@ -692,9 +741,131 @@ function createCreatureRenderer(THREE, scene) {
     updateGhosts();
 
     group.position.z = Math.sin(frame.time * 1.3) * 0.035;
-    group.rotation.y = THREE.MathUtils.lerp(group.rotation.y, Math.sin(frame.time * 0.7) * 0.025, deltaSeconds * 4);
+    group.rotation.y = THREE.MathUtils.lerp(
+      group.rotation.y,
+      Math.sin(frame.time * 0.7) * 0.025,
+      deltaSeconds * 4,
+    );
     ghostGroup.position.copy(group.position);
     ghostGroup.rotation.copy(group.rotation);
+  }
+
+  function createBioMechBodyModule(index) {
+    const root = index === 0;
+    const module = new THREE.Group();
+    const hull = new THREE.Mesh(hullGeometry, root ? rootMaterial : limbMaterial);
+    hull.castShadow = true;
+    hull.receiveShadow = true;
+    module.add(hull);
+
+    const topPlate = new THREE.Mesh(plateGeometry, root ? plateMaterial : armorMaterial);
+    topPlate.position.set(root ? 0 : -0.02, -0.02, 0.5);
+    topPlate.scale.set(root ? 0.95 : 0.76, root ? 0.9 : 0.72, 0.82);
+    topPlate.castShadow = true;
+    module.add(topPlate);
+
+    const rails = [];
+    for (const side of [-1, 1]) {
+      const rail = new THREE.Mesh(railGeometry, jointMaterial);
+      rail.position.set(0, side * 0.33, 0.42);
+      rail.rotation.z = Math.PI / 2;
+      rail.scale.set(0.82, 1, 0.82);
+      rail.castShadow = true;
+      module.add(rail);
+      rails.push(rail);
+    }
+
+    const sensors = [];
+    const sensorCount = root ? 3 : 2;
+    for (let sensorIndex = 0; sensorIndex < sensorCount; sensorIndex += 1) {
+      const sensor = new THREE.Mesh(sensorGeometry, sensorMaterial);
+      const centered = sensorIndex - (sensorCount - 1) / 2;
+      sensor.position.set(centered * 0.22, -0.24, 0.52);
+      sensor.castShadow = false;
+      module.add(sensor);
+      sensors.push(sensor);
+    }
+
+    module.userData = { hull, rails, sensors, topPlate, root };
+    return module;
+  }
+
+  function createBioMechActuatorModule() {
+    const module = new THREE.Group();
+    const pod = new THREE.Mesh(actuatorPodGeometry, actuatorMaterial);
+    pod.castShadow = true;
+    module.add(pod);
+
+    const ring = new THREE.Mesh(actuatorRingGeometry, sensorMaterial);
+    ring.rotation.y = Math.PI / 2;
+    module.add(ring);
+
+    const coils = [];
+    for (const offset of [-0.08, 0.08]) {
+      const coil = new THREE.Mesh(actuatorCoilGeometry, jointMaterial);
+      coil.position.set(offset, 0, 0.12);
+      coil.rotation.z = Math.PI * 0.18;
+      coil.castShadow = true;
+      module.add(coil);
+      coils.push(coil);
+    }
+
+    module.visible = false;
+    module.userData = { pod, ring, coils };
+    return module;
+  }
+
+  function createBioMechJointModule() {
+    const module = new THREE.Group();
+    const strut = new THREE.Mesh(jointStrutGeometry, jointMaterial);
+    strut.castShadow = true;
+    module.add(strut);
+
+    const ringStart = new THREE.Mesh(jointRingGeometry, jointMaterial);
+    const ringEnd = new THREE.Mesh(jointRingGeometry, jointMaterial);
+    module.add(ringStart);
+    module.add(ringEnd);
+
+    const pivot = new THREE.Mesh(jointPivotGeometry, sensorMaterial);
+    module.add(pivot);
+
+    module.userData = { strut, ringStart, ringEnd, pivot };
+    return module;
+  }
+
+  function updateBioMechBodyModule(module, index, time) {
+    const pulse = 1 + Math.sin(time * 8 + index * 0.6) * 0.08;
+    for (let sensorIndex = 0; sensorIndex < module.userData.sensors.length; sensorIndex += 1) {
+      const sensor = module.userData.sensors[sensorIndex];
+      sensor.scale.setScalar(pulse + sensorIndex * 0.04);
+      sensor.visible = state.effectsEnabled || module.userData.root;
+    }
+    for (const rail of module.userData.rails) {
+      rail.visible = state.effectsEnabled || module.userData.root;
+    }
+    module.userData.topPlate.visible = true;
+  }
+
+  function updateBioMechActuatorModule(module, pulse) {
+    module.userData.pod.scale.setScalar(0.95 + pulse * 0.12);
+    module.userData.ring.visible = state.effectsEnabled;
+    module.userData.ring.scale.setScalar(0.85 + pulse * 0.22);
+    for (let index = 0; index < module.userData.coils.length; index += 1) {
+      const coil = module.userData.coils[index];
+      coil.visible = state.effectsEnabled;
+      coil.rotation.x = pulse * 0.4 + index * 0.8;
+    }
+  }
+
+  function updateBioMechJointModule(module, length, time, index) {
+    const pulse = 1 + Math.sin(time * 7 + index * 0.5) * 0.08;
+    module.userData.strut.scale.set(1, length, 1);
+    module.userData.ringStart.position.y = -length / 2;
+    module.userData.ringEnd.position.y = length / 2;
+    module.userData.ringStart.scale.setScalar(pulse);
+    module.userData.ringEnd.scale.setScalar(pulse * 0.92);
+    module.userData.pivot.scale.setScalar(1.1 + pulse * 0.18);
+    module.userData.pivot.visible = state.effectsEnabled;
   }
 
   return { rebuild, update };
@@ -785,13 +956,18 @@ function bindActions(fetchReplay) {
       replayRequest.seed += 1;
     }
     fetchReplay().catch((error) => {
-      ui.fieldNote.textContent = "Replay data failed to load.";
+      ui.fieldNote.textContent = replayRequestIsArchive()
+        ? `Archive replay failed for run ${replayRequest.run}, cell ${formatCell(replayRequest.cell)}: ${error.message}`
+        : "Replay data failed to load.";
       console.error(error);
     });
   });
 
   window.addEventListener("keydown", (event) => {
     if (event.code !== "Space") {
+      return;
+    }
+    if (state.loading || !state.replay) {
       return;
     }
     event.preventDefault();
@@ -801,16 +977,35 @@ function bindActions(fetchReplay) {
 }
 
 function updateActionButtons() {
-  ui.playToggle.textContent = state.playing ? "Pause" : "Play";
-  ui.reroll.textContent = replayRequest.run
-    ? "Reload"
-    : replayRequest.mode === "evolved"
-      ? "Evolve"
-      : "Reroll";
+  ui.playToggle.disabled = state.loading || !state.replay;
+  ui.reroll.disabled = state.loading;
+  ui.playToggle.textContent = state.loading ? "Loading" : state.playing ? "Pause" : "Play";
+  if (state.loading) {
+    ui.reroll.textContent = replayRequestIsArchive() ? "Loading Cell" : "Loading";
+  } else if (replayRequestIsArchive()) {
+    ui.reroll.textContent = "Reload Cell";
+  } else {
+    ui.reroll.textContent = replayRequest.mode === "evolved" ? "Evolve" : "Reroll";
+  }
+  updateActionContextLabels();
   ui.cameraMode.textContent = CAMERA_LABELS[state.cameraMode];
   ui.fxToggle.textContent = state.effectsEnabled ? "Full FX" : "Lite FX";
   ui.cameraMode.classList.toggle("is-active", state.cameraMode !== "follow");
   ui.fxToggle.classList.toggle("is-active", state.effectsEnabled);
+}
+
+function updateActionContextLabels() {
+  if (!replayRequestIsArchive()) {
+    ui.reroll.setAttribute("aria-label", "Generate a new 3D replay");
+    ui.reroll.removeAttribute("title");
+    return;
+  }
+  const cell = formatCell(replayRequest.cell);
+  const label = state.loading
+    ? `Loading archive cell ${cell} from run ${replayRequest.run}`
+    : `Reload archive cell ${cell} from run ${replayRequest.run}`;
+  ui.reroll.setAttribute("aria-label", label);
+  ui.reroll.title = label;
 }
 
 function updateMetrics() {
@@ -832,9 +1027,14 @@ function fadeHint() {
 }
 
 function terrainHeight(task, x, z = 0) {
-  const roughness =
-    task === "flat" ? 0 : Math.sin(x * 1.7) * 0.12 + Math.cos(x * 0.47) * 0.08;
-  return roughness + Math.sin(z * 0.95 + x * 0.18) * 0.035;
+  void z;
+  if (task === "flat") {
+    return 0;
+  }
+  if (task === "steps") {
+    return Math.floor(x / 1.5) * 0.05;
+  }
+  return Math.sin(x * 1.7) * 0.12 + Math.cos(x * 0.47) * 0.08;
 }
 
 function seededNoise(value) {
@@ -850,25 +1050,83 @@ function labelFor(value) {
     .join(" ");
 }
 
+function replayRequestIsArchive() {
+  return Boolean(replayRequest.run && replayRequest.cell);
+}
+
+function applyInitialReplayContext() {
+  if (!replayRequestIsArchive()) {
+    ui.objectiveTitle.textContent = "Test the evolved stride";
+    ui.runLabel.textContent = `Evolving / ${labelFor(replayRequest.task)} / seed ${replayRequest.seed}`;
+    ui.fieldNote.textContent = "Evolving a compact population before replay.";
+    ui.reroll.textContent = replayRequest.mode === "evolved" ? "Evolve" : "Reroll";
+    ui.returnLink.textContent = "Archive";
+    ui.returnLink.setAttribute("aria-label", "Return to archive browser");
+    return;
+  }
+
+  const cell = formatCell(replayRequest.cell);
+  ui.objectiveTitle.textContent = "Inspect archive elite";
+  ui.runLabel.textContent = `Run ${replayRequest.run} / Cell ${cell}`;
+  ui.fieldNote.textContent = `Preparing archived cell ${cell} from run ${replayRequest.run}.`;
+  ui.reroll.textContent = "Load Cell";
+  ui.returnLink.textContent = "Archive";
+  ui.returnLink.setAttribute(
+    "aria-label",
+    `Return to archive browser from run ${replayRequest.run}, cell ${cell}`,
+  );
+}
+
+function applyLoadedReplayContext(replay) {
+  if (replay.source === "archive") {
+    ui.objectiveTitle.textContent = "Inspect archive elite";
+  } else {
+    ui.objectiveTitle.textContent =
+      replay.source === "evolved" ? "Test the evolved stride" : "Replay seed body plan";
+  }
+  ui.runLabel.textContent = replayRunLabel(replay);
+  ui.fieldNote.textContent = replayFieldNote(replay);
+}
+
+function loadingFieldNote() {
+  if (replayRequestIsArchive()) {
+    return `Loading archived cell ${formatCell(replayRequest.cell)} from run ${replayRequest.run}.`;
+  }
+  if (replayRequest.mode === "evolved") {
+    return `Evolving ${replayRequest.population} candidates for ${replayRequest.generations} generations.`;
+  }
+  return "Syncing replay data.";
+}
+
 function replayRunLabel(replay) {
+  if (replay.source === "archive") {
+    return `${labelFor(replay.controller)} / ${labelFor(replay.task)} / run ${replay.run_id || replayRequest.run || "--"} / cell ${replayCellLabel(replay)}`;
+  }
   const generationLabel =
-    replay.source === "archive"
-      ? `cell ${replay.cell ? replay.cell.join(",") : "--"}`
-      : replay.source === "evolved"
-        ? `gen ${replay.generations}`
-        : replay.source || "minimal";
+    replay.source === "evolved" ? `gen ${replay.generations}` : replay.source || "minimal";
   return `${labelFor(replay.controller)} / ${labelFor(replay.task)} / ${generationLabel} / seed ${replay.seed}`;
 }
 
 function replayFieldNote(replay) {
   const bodyText = `${replay.body.length} body parts and ${Math.max(0, replay.body.length - 1)} joints`;
   if (replay.source === "archive") {
-    return `${bodyText}, replaying archived genome ${replay.genome_id} from run ${replay.run_id}. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}.`;
+    return `${bodyText}, replaying archived genome ${replay.genome_id || "--"} from run ${replay.run_id || replayRequest.run || "--"}, cell ${replayCellLabel(replay)}. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}.`;
   }
   if (replay.source !== "evolved") {
     return `${bodyText}, replaying a seed genome across rough terrain.`;
   }
   return `Evolved ${replay.population} candidates over ${replay.generations} generations. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
+}
+
+function replayCellLabel(replay) {
+  return replay.cell ? replay.cell.join(",") : formatCell(replayRequest.cell);
+}
+
+function formatCell(cell) {
+  if (Array.isArray(cell)) {
+    return cell.join(",");
+  }
+  return typeof cell === "string" && cell.length > 0 ? cell : "--";
 }
 
 function formatMetric(value, digits) {

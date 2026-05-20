@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Axiom 3D Graphics Example</title>
+    <title>Axiom 3D Replay</title>
     <link rel="stylesheet" href="/graphics3d.css" />
   </head>
   <body>
@@ -13,7 +13,7 @@
       <section class="hud-layer" aria-label="3D replay HUD">
         <div class="objective-chip">
           <span>Objective</span>
-          <strong>Test the evolved stride</strong>
+          <strong id="objective-title">Test the evolved stride</strong>
           <small id="run-label">Evolving / rough / seed 29</small>
         </div>
 
@@ -42,13 +42,13 @@
           <button id="reroll" type="button">Evolve</button>
           <button id="camera-mode" type="button">Follow</button>
           <button id="fx-toggle" type="button">Full FX</button>
-          <a href="/" aria-label="Return to 2D replay">2D</a>
+          <a id="return-link" href="/" aria-label="Return to archive browser">Archive</a>
         </div>
 
         <div id="control-hint" class="control-hint">Drag to orbit</div>
       </section>
     </main>
 
-    <script type="module" src="/graphics3d.js"></script>
+    <script type="module" src="/graphics3d.js?v=biomech"></script>
   </body>
 </html>

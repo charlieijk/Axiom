@@ -3,21 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Axiom Evolution Lab</title>
+    <title>Axiom Archive Replay Browser</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="lab-shell">
+    <main class="lab-shell product-shell">
       <header class="topbar">
         <div class="brand-row">
           <div class="mark" aria-hidden="true"></div>
           <div>
-            <h1>Axiom</h1>
-            <p>Evolution Lab</p>
+            <h1>Axiom Archive</h1>
+            <p>Evolution replay browser</p>
           </div>
         </div>
+        <div class="checkpoint-picker">
+          <div class="checkpoint-row topbar-checkpoints">
+            <select id="checkpoint-list" aria-label="Saved checkpoints"></select>
+            <button id="load-checkpoint" type="button" disabled>Load</button>
+          </div>
+          <p id="checkpoint-meta" class="checkpoint-meta">Checking local checkpoints</p>
+        </div>
         <div class="run-status" aria-label="Run status">
-          <span id="status">Ready</span>
+          <span id="status">Checking checkpoints</span>
           <strong id="progress-label">0%</strong>
           <div class="progress-track" aria-hidden="true">
             <div id="progress-fill"></div>
@@ -25,82 +32,104 @@
         </div>
       </header>
 
-      <section class="config-panel" aria-label="Run configuration">
-        <label>
-          Task
-          <select id="task">
-            <option value="rough">Rough</option>
-            <option value="flat">Flat</option>
-            <option value="recovery">Recovery</option>
-          </select>
-        </label>
-        <label>
-          Seed
-          <input id="seed" type="number" min="1" step="1" value="42" />
-        </label>
-        <label>
-          Generations
-          <input id="generations" type="number" min="1" max="40" step="1" value="16" />
-        </label>
-        <label>
-          Population
-          <input id="population" type="number" min="4" max="96" step="1" value="32" />
-        </label>
-        <label>
-          Steps
-          <input id="steps" type="number" min="20" max="500" step="10" value="180" />
-        </label>
-        <label>
-          Width
-          <input id="archive-width" type="number" min="2" max="32" step="1" value="12" />
-        </label>
-        <label>
-          Height
-          <input id="archive-height" type="number" min="2" max="24" step="1" value="8" />
-        </label>
-        <label>
-          X Axis
-          <select id="x-axis">
-            <option value="stable-distance">Stable distance</option>
-            <option value="distance">Distance</option>
-            <option value="jump-height">Jump height</option>
-            <option value="uprightness">Uprightness</option>
-            <option value="stability">Stability</option>
-            <option value="body-count">Body count</option>
-            <option value="actuator-count">Actuator count</option>
-          </select>
-        </label>
-        <label>
-          Y Axis
-          <select id="y-axis">
-            <option value="body-count">Body count</option>
-            <option value="actuator-count">Actuator count</option>
-            <option value="stability">Stability</option>
-            <option value="uprightness">Uprightness</option>
-            <option value="distance">Distance</option>
-            <option value="stable-distance">Stable distance</option>
-            <option value="jump-height">Jump height</option>
-          </select>
-        </label>
-        <button id="run-button" type="button">Start Run</button>
-      </section>
-
-      <section class="main-grid">
+      <section class="main-grid product-grid">
         <section class="archive-panel" aria-label="MAP-Elites archive">
           <div class="panel-header">
             <div>
-              <h2>Archive</h2>
-              <p id="archive-meta">No run loaded</p>
+              <h2>Evolution Archive</h2>
+              <p id="archive-meta">Checking local checkpoints</p>
             </div>
-            <div class="checkpoint-row">
-              <select id="checkpoint-list" aria-label="Saved checkpoints"></select>
-              <button id="load-checkpoint" type="button">Load</button>
-            </div>
+            <button id="run-button" class="primary-action" type="button">Evolve Archive</button>
           </div>
           <div id="archive-grid" class="archive-grid" role="grid" aria-label="Archive heatmap"></div>
+
+          <details class="run-config">
+            <summary>Run setup</summary>
+            <section class="config-panel" aria-label="Run configuration">
+              <label>
+                Task
+                <select id="task">
+                  <option value="rough">Rough</option>
+                  <option value="flat">Flat</option>
+                  <option value="steps">Steps</option>
+                  <option value="recovery">Recovery</option>
+                </select>
+              </label>
+              <label>
+                Pack
+                <select id="task-pack">
+                  <option value="single-task">Single task</option>
+                  <option value="rough-inspection">Rough inspection</option>
+                </select>
+              </label>
+              <label>
+                Seed
+                <input id="seed" type="number" min="1" step="1" value="42" />
+              </label>
+              <label>
+                Generations
+                <input id="generations" type="number" min="1" max="40" step="1" value="16" />
+              </label>
+              <label>
+                Population
+                <input id="population" type="number" min="4" max="96" step="1" value="32" />
+              </label>
+              <label>
+                Steps
+                <input id="steps" type="number" min="20" max="500" step="10" value="180" />
+              </label>
+              <label>
+                Max Body
+                <input id="max-body-parts" type="number" min="1" max="12" step="1" value="8" />
+              </label>
+              <label>
+                Max Actuators
+                <input id="max-actuators" type="number" min="0" max="12" step="1" value="6" />
+              </label>
+              <label>
+                Width
+                <input id="archive-width" type="number" min="2" max="32" step="1" value="12" />
+              </label>
+              <label>
+                Height
+                <input id="archive-height" type="number" min="2" max="24" step="1" value="8" />
+              </label>
+              <label>
+                X Axis
+                <select id="x-axis">
+                  <option value="stable-distance">Stable distance</option>
+                  <option value="distance">Distance</option>
+                  <option value="jump-height">Jump height</option>
+                  <option value="uprightness">Uprightness</option>
+                  <option value="stability">Stability</option>
+                  <option value="body-count">Body count</option>
+                  <option value="actuator-count">Actuator count</option>
+                </select>
+              </label>
+              <label>
+                Y Axis
+                <select id="y-axis">
+                  <option value="body-count">Body count</option>
+                  <option value="actuator-count">Actuator count</option>
+                  <option value="stability">Stability</option>
+                  <option value="uprightness">Uprightness</option>
+                  <option value="distance">Distance</option>
+                  <option value="stable-distance">Stable distance</option>
+                  <option value="jump-height">Jump height</option>
+                </select>
+              </label>
+            </section>
+          </details>
         </section>
 
         <section class="viewport-panel" aria-label="Selected elite replay">
+          <div class="replay-heading">
+            <div>
+              <h2>Replay</h2>
+              <p>Selected archive elite</p>
+            </div>
+            <a id="view-3d" class="button-link disabled" href="/3d" aria-disabled="true">Open 3D</a>
+          </div>
           <canvas id="simulator" width="1280" height="760"></canvas>
           <div class="hud">
             <div>
@@ -116,15 +145,28 @@
               <strong id="metric-tilt">0.00</strong>
             </div>
           </div>
+          <div class="playback-panel">
+            <button id="play" type="button" disabled>Play</button>
+            <button id="restart" type="button" disabled>Restart</button>
+            <label>
+              Speed
+              <input id="speed" type="range" min="0.25" max="3" value="1" step="0.25" disabled />
+              <output id="speed-value">1.00x</output>
+            </label>
+            <label>
+              Replay
+              <input id="scrubber" type="range" min="0" max="1" value="0" step="1" disabled />
+              <output id="frame-value">0</output>
+            </label>
+          </div>
         </section>
 
         <aside class="detail-panel" aria-label="Selected elite details">
           <div class="panel-header compact">
             <div>
               <h2>Elite</h2>
-              <p id="selected-cell">Select an occupied cell</p>
+              <p id="selected-cell">Loading saved archive</p>
             </div>
-            <a id="view-3d" class="button-link disabled" href="/3d" aria-disabled="true">3D</a>
           </div>
 
           <div class="metric-grid">
@@ -138,24 +180,9 @@
 
           <div class="lineage-panel">
             <span class="section-label">Mutation</span>
-            <p id="elite-mutation">No elite selected.</p>
+            <p id="elite-mutation">No archive loaded.</p>
             <span class="section-label">Lineage</span>
             <ol id="lineage-list"></ol>
-          </div>
-
-          <div class="playback-panel">
-            <button id="play" type="button">Pause</button>
-            <button id="restart" type="button">Restart</button>
-            <label>
-              Speed
-              <input id="speed" type="range" min="0.25" max="3" value="1" step="0.25" />
-              <output id="speed-value">1.00x</output>
-            </label>
-            <label>
-              Replay
-              <input id="scrubber" type="range" min="0" max="1" value="0" step="1" />
-              <output id="frame-value">0</output>
-            </label>
           </div>
         </aside>
       </section>

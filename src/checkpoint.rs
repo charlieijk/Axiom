@@ -1,4 +1,8 @@
-use std::{fs, io, path::Path};
+use std::{
+    fs, io,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +13,8 @@ pub const CHECKPOINT_VERSION: u32 = 1;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EvolutionCheckpoint {
     pub version: u32,
+    #[serde(default)]
+    pub saved_at_unix_ms: Option<u64>,
     pub config: EvolutionConfig,
     pub report: EvolutionReport,
 }
@@ -17,6 +23,7 @@ impl EvolutionCheckpoint {
     pub fn from_report(report: EvolutionReport) -> Self {
         Self {
             version: CHECKPOINT_VERSION,
+            saved_at_unix_ms: unix_time_millis(SystemTime::now()),
             config: report.config.clone(),
             report,
         }
@@ -34,6 +41,11 @@ pub fn save_checkpoint(path: impl AsRef<Path>, checkpoint: &EvolutionCheckpoint)
 pub fn load_checkpoint(path: impl AsRef<Path>) -> io::Result<EvolutionCheckpoint> {
     let json = fs::read_to_string(path)?;
     serde_json::from_str(&json).map_err(io::Error::other)
+}
+
+fn unix_time_millis(time: SystemTime) -> Option<u64> {
+    let millis = time.duration_since(UNIX_EPOCH).ok()?.as_millis();
+    u64::try_from(millis).ok()
 }
 
 #[cfg(test)]

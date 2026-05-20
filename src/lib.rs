@@ -7,8 +7,10 @@ pub mod math;
 pub mod network;
 pub mod policy;
 pub mod qd;
+pub mod report;
 pub mod rng;
 pub mod simulation;
+pub mod task_pack;
 pub mod web;
 
 pub use checkpoint::{CHECKPOINT_VERSION, EvolutionCheckpoint, load_checkpoint, save_checkpoint};
@@ -17,6 +19,8 @@ pub use evolution::{
     SearchMode, run_evolution, run_evolution_with_progress,
 };
 pub use fitness::{Evaluation, TaskKind, evaluate};
-pub use genome::{BodyGenome, Genome};
+pub use genome::{BodyGenome, Genome, MorphologyConstraints};
 pub use policy::{Brain, BrainState, ControllerKind};
 pub use qd::{Archive, Axis};
+pub use report::{render_report_markdown, save_report_json, save_report_markdown};
+pub use task_pack::{PackEvaluation, TaskPackKind, TaskScenario, evaluate_pack};

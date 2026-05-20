@@ -3,17 +3,18 @@ use std::{
     fs,
     io::{self, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     Axis, EvolutionCheckpoint, EvolutionConfig, EvolutionReport, Genome, SearchMode, TaskKind,
-    animation::capture_replay, evaluate, load_checkpoint, policy::ControllerKind, qd::Elite,
-    rng::Rng, run_evolution, run_evolution_with_progress, save_checkpoint,
+    TaskPackKind, animation::capture_replay, evaluate, load_checkpoint, policy::ControllerKind,
+    qd::Elite, rng::Rng, run_evolution, run_evolution_with_progress, save_checkpoint,
 };
 
 const INDEX_HTML: &str = include_str!("../web/index.html");
@@ -189,6 +190,10 @@ struct RunStartRequest {
     generations: Option<usize>,
     evaluation_steps: Option<usize>,
     task: Option<String>,
+    pack: Option<String>,
+    task_pack: Option<String>,
+    max_body_parts: Option<usize>,
+    max_actuators: Option<usize>,
     search_mode: Option<String>,
     archive_width: Option<usize>,
     archive_height: Option<usize>,
@@ -269,6 +274,18 @@ struct CheckpointListResponse {
 struct CheckpointFileResponse {
     name: String,
     bytes: u64,
+    modified_unix_ms: Option<u64>,
+    saved_unix_ms: Option<u64>,
+    timestamp_unix_ms: Option<u64>,
+    task: Option<&'static str>,
+    task_pack: Option<&'static str>,
+    archive_width: Option<usize>,
+    archive_height: Option<usize>,
+    archive_x_axis: Option<&'static str>,
+    archive_y_axis: Option<&'static str>,
+    occupied_cells: Option<usize>,
+    coverage: Option<f32>,
+    metadata_error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -486,23 +503,82 @@ pub fn gui_smoke_check() -> io::Result<()> {
     .map_err(io::Error::other)?;
     let archive = archive_response_from_report("smoke", &report);
 
-    if !html.contains("archive-grid")
-        || !html.contains("run-button")
-        || !css.contains(".lab-shell")
-        || !js.contains("startRun")
-    {
-        return Err(io::Error::other(
-            "Lab assets did not include expected UI markers",
-        ));
-    }
-    if !graphics.contains("graphics-canvas")
-        || !graphics_js.contains("THREE_MODULE_URL")
-        || !graphics_js.contains("run")
-    {
-        return Err(io::Error::other(
-            "3D GUI assets did not include expected scene markers",
-        ));
-    }
+    require_asset_markers(
+        "archive browser HTML",
+        &html,
+        &[
+            (
+                "archive replay page title",
+                "<title>Axiom Archive Replay Browser</title>",
+            ),
+            ("product title", "<h1>Axiom Archive</h1>"),
+            ("archive heading", "<h2>Evolution Archive</h2>"),
+            ("archive grid", "id=\"archive-grid\""),
+            ("archive run CTA", "id=\"run-button\""),
+            ("task pack select", "id=\"task-pack\""),
+            ("body limit input", "id=\"max-body-parts\""),
+            ("actuator limit input", "id=\"max-actuators\""),
+            (
+                "archive-first checkpoint state",
+                "Checking local checkpoints",
+            ),
+            ("replay heading", "<h2>Replay</h2>"),
+            ("selected archive replay context", "Selected archive elite"),
+            ("3D replay CTA", "id=\"view-3d\""),
+            ("3D replay CTA label", ">Open 3D</a>"),
+            ("play button", "id=\"play\""),
+            ("restart button", "id=\"restart\""),
+            ("speed control", "id=\"speed\""),
+            ("scrubber control", "id=\"scrubber\""),
+            ("frame counter", "id=\"frame-value\""),
+        ],
+    )?;
+    require_asset_order(
+        "archive browser HTML",
+        &html,
+        &[
+            ("archive panel", "class=\"archive-panel\""),
+            ("replay panel", "class=\"viewport-panel\""),
+            ("detail panel", "class=\"detail-panel\""),
+        ],
+    )?;
+    require_asset_markers(
+        "archive browser CSS",
+        &css,
+        &[
+            ("lab shell styles", ".lab-shell"),
+            ("playback panel styles", ".playback-panel"),
+        ],
+    )?;
+    require_asset_markers(
+        "archive browser JS",
+        &js,
+        &[
+            ("run starter", "startRun"),
+            ("archive browser boot", "bootArchiveBrowser"),
+            ("empty checkpoint state", "showEmptyCheckpointState"),
+            ("2D bio-mech figure renderer", "drawBioMechBody"),
+        ],
+    )?;
+    require_asset_markers(
+        "3D replay HTML",
+        &graphics,
+        &[
+            ("3D page title", "<title>Axiom 3D Replay</title>"),
+            ("3D scene canvas", "graphics-canvas"),
+            ("3D playback toggle", "play-toggle"),
+            ("archive return link", "Return to archive browser"),
+        ],
+    )?;
+    require_asset_markers(
+        "3D replay JS",
+        &graphics_js,
+        &[
+            ("Three.js module", "THREE_MODULE_URL"),
+            ("archive replay run query", "run"),
+            ("3D bio-mech figure renderer", "createBioMechBodyModule"),
+        ],
+    )?;
     if !replay.contains("\"frames\"") || !replay.contains("\"bodies\"") {
         return Err(io::Error::other(
             "replay JSON did not include frame/body data",
@@ -513,6 +589,41 @@ pub fn gui_smoke_check() -> io::Result<()> {
     }
 
     println!("GUI smoke check passed");
+    Ok(())
+}
+
+fn require_asset_markers(
+    asset_name: &str,
+    asset: &str,
+    markers: &[(&str, &str)],
+) -> io::Result<()> {
+    let missing = markers
+        .iter()
+        .filter_map(|(label, marker)| (!asset.contains(marker)).then_some(*label))
+        .collect::<Vec<_>>();
+
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(io::Error::other(format!(
+            "{asset_name} missing expected UI markers: {}",
+            missing.join(", ")
+        )))
+    }
+}
+
+fn require_asset_order(asset_name: &str, asset: &str, markers: &[(&str, &str)]) -> io::Result<()> {
+    let mut offset = 0;
+
+    for (label, marker) in markers {
+        let Some(index) = asset[offset..].find(marker) else {
+            return Err(io::Error::other(format!(
+                "{asset_name} missing expected UI marker while checking order: {label}",
+            )));
+        };
+        offset += index + marker.len();
+    }
+
     Ok(())
 }
 
@@ -726,6 +837,10 @@ fn parse_run_start_config(body: &str) -> Result<EvolutionConfig, String> {
             generations: None,
             evaluation_steps: None,
             task: None,
+            pack: None,
+            task_pack: None,
+            max_body_parts: None,
+            max_actuators: None,
             search_mode: None,
             archive_width: None,
             archive_height: None,
@@ -754,6 +869,20 @@ fn parse_run_start_config(body: &str) -> Result<EvolutionConfig, String> {
     }
     if let Some(task) = request.task {
         config.task = TaskKind::parse(&task).ok_or_else(|| format!("unknown task: {task}"))?;
+    }
+    if let Some(pack) = request.task_pack.or(request.pack) {
+        let pack = pack.trim();
+        if !pack.is_empty() && pack != "single-task" && pack != "none" {
+            config.task_pack = Some(
+                TaskPackKind::parse(pack).ok_or_else(|| format!("unknown task pack: {pack}"))?,
+            );
+        }
+    }
+    if let Some(max_body_parts) = request.max_body_parts {
+        config.morphology_constraints.max_body_parts = max_body_parts.clamp(1, 12);
+    }
+    if let Some(max_actuators) = request.max_actuators {
+        config.morphology_constraints.max_actuators = max_actuators.clamp(0, 12);
     }
     if let Some(search_mode) = request.search_mode {
         config.search_mode = SearchMode::parse(&search_mode)
@@ -820,17 +949,21 @@ fn spawn_evolution_worker(store: SharedRunStore, id: String, config: EvolutionCo
 }
 
 fn checkpoint_list_response(store: SharedRunStore) -> (&'static str, &'static str, String) {
-    let locked = store.lock().expect("run store should not be poisoned");
-    let files = match fs::read_dir(&locked.checkpoint_dir) {
+    let (checkpoint_dir, directory_label) = {
+        let locked = store.lock().expect("run store should not be poisoned");
+        (locked.checkpoint_dir.clone(), locked.checkpoint_dir_label())
+    };
+    let files = match fs::read_dir(&checkpoint_dir) {
         Ok(entries) => entries
             .filter_map(Result::ok)
             .filter_map(|entry| {
                 let name = entry.file_name().to_string_lossy().into_owned();
                 let metadata = entry.metadata().ok()?;
-                safe_checkpoint_name(&name).map(|name| CheckpointFileResponse {
-                    name,
-                    bytes: metadata.len(),
-                })
+                if !metadata.is_file() {
+                    return None;
+                }
+                safe_checkpoint_name(&name)
+                    .map(|name| checkpoint_file_response(&checkpoint_dir, name, metadata))
             })
             .collect::<Vec<_>>(),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Vec::new(),
@@ -845,14 +978,63 @@ fn checkpoint_list_response(store: SharedRunStore) -> (&'static str, &'static st
     };
 
     let mut files = files;
-    files.sort_by(|a, b| a.name.cmp(&b.name));
+    files.sort_by(|a, b| {
+        b.timestamp_unix_ms
+            .cmp(&a.timestamp_unix_ms)
+            .then_with(|| a.name.cmp(&b.name))
+    });
     json_response(
         "200 OK",
         &CheckpointListResponse {
-            directory: locked.checkpoint_dir_label(),
+            directory: directory_label,
             files,
         },
     )
+}
+
+fn checkpoint_file_response(
+    checkpoint_dir: &Path,
+    name: String,
+    metadata: fs::Metadata,
+) -> CheckpointFileResponse {
+    let modified_unix_ms = metadata.modified().ok().and_then(unix_time_millis);
+    let mut response = CheckpointFileResponse {
+        name,
+        bytes: metadata.len(),
+        modified_unix_ms,
+        saved_unix_ms: None,
+        timestamp_unix_ms: modified_unix_ms,
+        task: None,
+        task_pack: None,
+        archive_width: None,
+        archive_height: None,
+        archive_x_axis: None,
+        archive_y_axis: None,
+        occupied_cells: None,
+        coverage: None,
+        metadata_error: None,
+    };
+
+    let checkpoint_path = checkpoint_dir.join(&response.name);
+    match load_checkpoint(&checkpoint_path) {
+        Ok(checkpoint) => {
+            response.saved_unix_ms = checkpoint.saved_at_unix_ms;
+            response.timestamp_unix_ms = checkpoint.saved_at_unix_ms.or(modified_unix_ms);
+            response.task = Some(checkpoint.report.config.task.as_str());
+            response.task_pack = checkpoint.report.config.task_pack.map(TaskPackKind::as_str);
+            response.archive_width = Some(checkpoint.report.archive.width);
+            response.archive_height = Some(checkpoint.report.archive.height);
+            response.archive_x_axis = Some(checkpoint.report.archive.x_axis.as_str());
+            response.archive_y_axis = Some(checkpoint.report.archive.y_axis.as_str());
+            response.occupied_cells = Some(checkpoint.report.archive.occupied_count());
+            response.coverage = Some(checkpoint.report.archive.coverage());
+        }
+        Err(error) => {
+            response.metadata_error = Some(error.to_string());
+        }
+    }
+
+    response
 }
 
 fn checkpoint_load_response(
@@ -1325,6 +1507,11 @@ fn json_response<T: Serialize>(
     )
 }
 
+fn unix_time_millis(time: SystemTime) -> Option<u64> {
+    let millis = time.duration_since(UNIX_EPOCH).ok()?.as_millis();
+    u64::try_from(millis).ok()
+}
+
 fn url_decode(value: &str) -> String {
     let mut output = String::with_capacity(value.len());
     let mut chars = value.as_bytes().iter().copied();
@@ -1351,11 +1538,17 @@ fn url_decode(value: &str) -> String {
 mod tests {
     use super::{
         MAX_EVOLVED_REPLAY_COST, ReplayMode, ReplayRequest, ReplayRequestError, RunStore,
-        api_replay_response, archive_response_from_report, bind_first_available, gui_smoke_check,
-        parse_replay_request, replay_json, safe_checkpoint_name, validate_replay_request,
+        api_replay_response, archive_response_from_report, bind_first_available,
+        checkpoint_list_response, gui_smoke_check, parse_replay_request, replay_json,
+        safe_checkpoint_name, validate_replay_request,
     };
-    use crate::{EvolutionConfig, evolution::run_evolution};
-    use std::path::PathBuf;
+    use crate::{Axis, EvolutionCheckpoint, EvolutionConfig, TaskKind, evolution::run_evolution};
+    use std::{
+        env, fs,
+        path::{Path, PathBuf},
+        sync::{Arc, Mutex},
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     #[test]
     fn gui_smoke_check_loads_assets_and_replay_data() {
@@ -1504,6 +1697,65 @@ mod tests {
     }
 
     #[test]
+    fn checkpoint_list_is_newest_first_and_includes_summary_metadata() {
+        let dir = unique_temp_dir("axiom-checkpoint-list");
+        fs::create_dir_all(&dir).expect("temp checkpoint dir should be created");
+        write_test_checkpoint(
+            &dir,
+            "older.json",
+            1_000,
+            TaskKind::FlatRun,
+            Axis::Distance,
+            Axis::BodyCount,
+        );
+        write_test_checkpoint(
+            &dir,
+            "newer.json",
+            2_000,
+            TaskKind::Recovery,
+            Axis::Stability,
+            Axis::ActuatorCount,
+        );
+        let store = Arc::new(Mutex::new(RunStore::new(dir.clone())));
+
+        let (status, _, body) = checkpoint_list_response(store);
+        let _ = fs::remove_dir_all(&dir);
+        let value: serde_json::Value =
+            serde_json::from_str(&body).expect("checkpoint list should serialize as JSON");
+        let files = value["files"].as_array().expect("files should be an array");
+
+        assert_eq!(status, "200 OK");
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0]["name"], "newer.json");
+        assert_eq!(files[0]["timestamp_unix_ms"], 2_000);
+        assert_eq!(files[0]["task"], "recovery");
+        assert_eq!(files[0]["archive_x_axis"], "stability");
+        assert_eq!(files[0]["archive_y_axis"], "actuator-count");
+        assert!(files[0]["occupied_cells"].as_u64().unwrap() > 0);
+        assert!(files[0]["coverage"].as_f64().unwrap() > 0.0);
+        assert_eq!(files[1]["name"], "older.json");
+    }
+
+    #[test]
+    fn checkpoint_list_missing_directory_returns_empty_files() {
+        let dir = unique_temp_dir("axiom-empty-checkpoint-list");
+        let _ = fs::remove_dir_all(&dir);
+        let store = Arc::new(Mutex::new(RunStore::new(dir.clone())));
+
+        let (status, _, body) = checkpoint_list_response(store);
+        let value: serde_json::Value =
+            serde_json::from_str(&body).expect("checkpoint list should serialize as JSON");
+        let files = value["files"].as_array().expect("files should be an array");
+
+        assert_eq!(status, "200 OK");
+        assert_eq!(
+            value["directory"].as_str(),
+            Some(dir.to_string_lossy().as_ref())
+        );
+        assert!(files.is_empty());
+    }
+
+    #[test]
     fn bind_first_available_does_not_overflow_high_ports() {
         let result = bind_first_available("invalid host", u16::MAX);
 
@@ -1515,5 +1767,40 @@ mod tests {
         let result = bind_first_available("not-a-real-host.invalid", u16::MAX);
 
         assert!(result.is_err());
+    }
+
+    fn unique_temp_dir(prefix: &str) -> PathBuf {
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_millis();
+        env::temp_dir().join(format!("{prefix}-{millis}"))
+    }
+
+    fn write_test_checkpoint(
+        dir: &Path,
+        name: &str,
+        saved_at_unix_ms: u64,
+        task: TaskKind,
+        archive_x_axis: Axis,
+        archive_y_axis: Axis,
+    ) {
+        let report = run_evolution(EvolutionConfig {
+            seed: saved_at_unix_ms,
+            population_size: 4,
+            generations: 1,
+            evaluation_steps: 8,
+            task,
+            archive_width: 4,
+            archive_height: 3,
+            archive_x_axis,
+            archive_y_axis,
+            ..EvolutionConfig::default()
+        })
+        .expect("test checkpoint evolution should run");
+        let mut checkpoint = EvolutionCheckpoint::from_report(report);
+        checkpoint.saved_at_unix_ms = Some(saved_at_unix_ms);
+        crate::save_checkpoint(dir.join(name), &checkpoint)
+            .expect("test checkpoint should be written");
     }
 }

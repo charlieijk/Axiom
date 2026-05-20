@@ -3,10 +3,11 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::fitness::{Evaluation, TaskKind, evaluate};
-use crate::genome::Genome;
+use crate::genome::{Genome, MorphologyConstraints};
 use crate::policy::ControllerKind;
 use crate::qd::{Archive, Axis, Elite};
 use crate::rng::Rng;
+use crate::task_pack::{TaskPackKind, evaluate_pack};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SearchMode {
@@ -38,6 +39,10 @@ pub struct EvolutionConfig {
     pub generations: usize,
     pub evaluation_steps: usize,
     pub task: TaskKind,
+    #[serde(default)]
+    pub task_pack: Option<TaskPackKind>,
+    #[serde(default)]
+    pub morphology_constraints: MorphologyConstraints,
     pub search_mode: SearchMode,
     pub archive_width: usize,
     pub archive_height: usize,
@@ -53,6 +58,8 @@ impl Default for EvolutionConfig {
             generations: 20,
             evaluation_steps: 240,
             task: TaskKind::RoughTerrain,
+            task_pack: None,
+            morphology_constraints: MorphologyConstraints::default(),
             search_mode: SearchMode::MapElites,
             archive_width: 12,
             archive_height: 8,
@@ -72,6 +79,11 @@ impl EvolutionConfig {
         if self.archive_width == 0 || self.archive_height == 0 {
             return Err(EvolutionConfigError::new(
                 "archive width and height must be greater than zero",
+            ));
+        }
+        if self.morphology_constraints.max_body_parts == 0 {
+            return Err(EvolutionConfigError::new(
+                "max body parts must be greater than zero",
             ));
         }
 
@@ -166,6 +178,7 @@ where
     config.validate()?;
 
     let mut rng = Rng::new(config.seed);
+    let morphology_constraints = config.morphology_constraints;
     let mut next_genome_id = 1_u64;
     let mut lineage = Vec::new();
     let mut population: Vec<TrackedGenome> = (0..config.population_size)
@@ -177,8 +190,9 @@ where
             };
             let variation_depth = seed_variation_depth(index);
             let mut genome = Genome::minimal(controller, &mut rng);
+            genome.enforce_morphology_constraints(&morphology_constraints, &mut rng);
             for _ in 0..variation_depth {
-                genome = genome.mutate(&mut rng);
+                genome = genome.mutate_with_constraints(&mut rng, &morphology_constraints);
             }
             let id = next_genome_id;
             next_genome_id += 1;
@@ -218,7 +232,7 @@ where
     for generation in 0..config.generations {
         let mut scored = Vec::with_capacity(population.len());
         for tracked in population.drain(..) {
-            let evaluation = evaluate(&tracked.genome, config.task, config.evaluation_steps);
+            let evaluation = evaluate_for_config(&tracked.genome, &config);
             evaluated_count += 1;
             if best_evaluation
                 .as_ref()
@@ -277,7 +291,9 @@ where
             } else {
                 elites[rng.range_usize(elites.len())].clone()
             };
-            let genome = parent.genome.mutate(&mut rng);
+            let genome = parent
+                .genome
+                .mutate_with_constraints(&mut rng, &morphology_constraints);
             let id = next_genome_id;
             next_genome_id += 1;
             let mutation_summary = mutation_summary(&parent.genome, &genome);
@@ -305,7 +321,7 @@ where
             .first()
             .expect("population has already been validated")
             .clone();
-        let evaluation = evaluate(&tracked.genome, config.task, config.evaluation_steps);
+        let evaluation = evaluate_for_config(&tracked.genome, &config);
         evaluated_count += 1;
         archive.insert_tracked(
             tracked.genome.clone(),
@@ -332,6 +348,13 @@ where
         generation_summaries,
         lineage,
     })
+}
+
+fn evaluate_for_config(genome: &Genome, config: &EvolutionConfig) -> Evaluation {
+    match config.task_pack {
+        Some(pack) => evaluate_pack(genome, pack, config.evaluation_steps).as_evaluation(),
+        None => evaluate(genome, config.task, config.evaluation_steps),
+    }
 }
 
 fn lineage_record(
@@ -393,7 +416,7 @@ fn generation_summary(
 #[cfg(test)]
 mod tests {
     use super::{EvolutionConfig, SearchMode, run_evolution};
-    use crate::{TaskKind, qd::Axis};
+    use crate::{MorphologyConstraints, TaskKind, TaskPackKind, qd::Axis};
 
     #[test]
     fn evolution_produces_archive_and_best_creature() {
@@ -444,6 +467,50 @@ mod tests {
         );
         assert_eq!(first.lineage.len(), second.lineage.len());
         assert!((first.best_evaluation.fitness - second.best_evaluation.fitness).abs() < 0.0001);
+    }
+
+    #[test]
+    fn evolution_can_evaluate_rough_inspection_pack() {
+        let report = run_evolution(EvolutionConfig {
+            population_size: 5,
+            generations: 1,
+            evaluation_steps: 20,
+            task_pack: Some(TaskPackKind::RoughInspection),
+            morphology_constraints: MorphologyConstraints::rough_inspection(),
+            ..EvolutionConfig::default()
+        })
+        .expect("valid pack config should run");
+
+        assert_eq!(report.config.task_pack, Some(TaskPackKind::RoughInspection));
+        assert!(report.best_evaluation.fitness.is_finite());
+        assert!(report.best_evaluation.steps > report.config.evaluation_steps);
+        assert!(report.best_genome.body.body_count() <= 8);
+        assert!(report.best_genome.body.actuator_count() <= 6);
+    }
+
+    #[test]
+    fn evolution_config_deserializes_legacy_single_task_shape() {
+        let json = r#"{
+            "seed": 1,
+            "population_size": 4,
+            "generations": 1,
+            "evaluation_steps": 12,
+            "task": "RoughTerrain",
+            "search_mode": "MapElites",
+            "archive_width": 4,
+            "archive_height": 3,
+            "archive_x_axis": "Distance",
+            "archive_y_axis": "BodyCount"
+        }"#;
+
+        let config: EvolutionConfig =
+            serde_json::from_str(json).expect("legacy config should deserialize");
+
+        assert_eq!(config.task_pack, None);
+        assert_eq!(
+            config.morphology_constraints,
+            MorphologyConstraints::default()
+        );
     }
 
     #[test]

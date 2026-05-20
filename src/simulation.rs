@@ -34,6 +34,14 @@ impl World {
         }
     }
 
+    pub fn steps() -> Self {
+        Self {
+            terrain: TerrainKind::Steps,
+            gravity: 9.8,
+            friction: 0.2,
+        }
+    }
+
     pub fn terrain_height(&self, x: f32) -> f32 {
         match self.terrain {
             TerrainKind::Flat => 0.0,

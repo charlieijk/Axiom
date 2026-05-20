@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub enum TaskKind {
     FlatRun,
     RoughTerrain,
+    StepField,
     Recovery,
 }
 
@@ -36,6 +37,7 @@ impl TaskKind {
         match self {
             Self::FlatRun => "flat",
             Self::RoughTerrain => "rough",
+            Self::StepField => "steps",
             Self::Recovery => "recovery",
         }
     }
@@ -44,6 +46,7 @@ impl TaskKind {
         match value {
             "flat" | "flat-run" => Some(Self::FlatRun),
             "rough" | "rough-terrain" => Some(Self::RoughTerrain),
+            "steps" | "step-field" | "stepfield" => Some(Self::StepField),
             "recovery" => Some(Self::Recovery),
             _ => None,
         }
@@ -53,6 +56,7 @@ impl TaskKind {
         match self {
             Self::FlatRun => World::flat(),
             Self::RoughTerrain => World::rough(),
+            Self::StepField => World::steps(),
             Self::Recovery => {
                 let mut world = World::rough();
                 world.friction = 0.28;
@@ -111,6 +115,7 @@ pub fn evaluate(genome: &Genome, task: TaskKind, steps: usize) -> Evaluation {
     let terrain_multiplier = match task {
         TaskKind::FlatRun => 1.0,
         TaskKind::RoughTerrain => 1.25,
+        TaskKind::StepField => 1.2,
         TaskKind::Recovery => 1.15,
     };
     let controlled_distance = stable_distance * 11.0 * terrain_multiplier;
@@ -218,6 +223,13 @@ mod tests {
 
         assert_eq!(observations.len(), crate::genome::sensor_count(&body));
         assert_eq!(observations[12], 20.0);
+    }
+
+    #[test]
+    fn step_field_task_uses_step_terrain() {
+        let world = TaskKind::StepField.world();
+
+        assert!(world.terrain_height(3.2) > world.terrain_height(0.2));
     }
 
     fn test_joint(node_id: usize, attachment: Attachment, angle: f32) -> JointState {

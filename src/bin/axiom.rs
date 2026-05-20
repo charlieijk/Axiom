@@ -1,11 +1,12 @@
 use axiom::{
-    Axis, EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind,
+    Axis, EvolutionCheckpoint, EvolutionConfig, Genome, MorphologyConstraints, SearchMode,
+    TaskKind, TaskPackKind,
     animation::{TerminalAnimationConfig, play_terminal_animation},
     evolution::run_evolution,
     fitness::evaluate,
     policy::ControllerKind,
     rng::Rng,
-    save_checkpoint,
+    save_checkpoint, save_report_json, save_report_markdown,
     web::{GuiConfig, gui_smoke_check, serve_gui},
 };
 
@@ -72,6 +73,8 @@ fn evaluate_once(controller: Option<&str>) {
 fn evolve(args: Vec<String>) {
     let mut config = EvolutionConfig::default();
     let mut checkpoint_path = None::<String>;
+    let mut report_json_path = None::<String>;
+    let mut report_md_path = None::<String>;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -87,6 +90,11 @@ fn evolve(args: Vec<String>) {
             "--task" => {
                 let value: String = parse_next(&args, &mut index, "task");
                 config.task = parse_task_or_exit(&value);
+                config.task_pack = None;
+            }
+            "--pack" => {
+                let value: String = parse_next(&args, &mut index, "pack");
+                config.task_pack = Some(parse_task_pack_or_exit(&value));
             }
             "--classic" => {
                 config.search_mode = SearchMode::Classic;
@@ -110,6 +118,23 @@ fn evolve(args: Vec<String>) {
             }
             "--checkpoint" => {
                 checkpoint_path = Some(parse_next(&args, &mut index, "checkpoint"));
+            }
+            "--max-body-parts" => {
+                config.morphology_constraints.max_body_parts =
+                    parse_next(&args, &mut index, "max body parts");
+            }
+            "--max-actuators" => {
+                config.morphology_constraints.max_actuators =
+                    parse_next(&args, &mut index, "max actuators");
+            }
+            "--rough-inspection-constraints" => {
+                config.morphology_constraints = MorphologyConstraints::rough_inspection();
+            }
+            "--report-json" => {
+                report_json_path = Some(parse_next(&args, &mut index, "report json"));
+            }
+            "--report-md" => {
+                report_md_path = Some(parse_next(&args, &mut index, "report markdown"));
             }
             other => {
                 eprintln!("unknown evolve option: {other}");
@@ -146,6 +171,22 @@ fn evolve(args: Vec<String>) {
         report.archive.occupied_count(),
         report.archive.coverage() * 100.0
     );
+
+    if let Some(path) = &report_json_path {
+        if let Err(error) = save_report_json(path, &report) {
+            eprintln!("JSON report failed: {error}");
+            std::process::exit(1);
+        }
+        println!("JSON report: {path}");
+    }
+
+    if let Some(path) = &report_md_path {
+        if let Err(error) = save_report_markdown(path, &report) {
+            eprintln!("Markdown report failed: {error}");
+            std::process::exit(1);
+        }
+        println!("Markdown report: {path}");
+    }
 
     if let Some(path) = checkpoint_path {
         let checkpoint = EvolutionCheckpoint::from_report(report);
@@ -276,6 +317,17 @@ fn parse_task_or_exit(value: &str) -> TaskKind {
     })
 }
 
+fn parse_task_pack(value: &str) -> Option<TaskPackKind> {
+    TaskPackKind::parse(value)
+}
+
+fn parse_task_pack_or_exit(value: &str) -> TaskPackKind {
+    parse_task_pack(value).unwrap_or_else(|| {
+        eprintln!("unknown task pack: {value}");
+        std::process::exit(2);
+    })
+}
+
 fn parse_axis_or_exit(value: &str) -> Axis {
     Axis::parse(value).unwrap_or_else(|| {
         eprintln!("unknown archive axis: {value}");
@@ -289,10 +341,13 @@ fn print_help() {
          Commands:\n\
            axiom demo\n\
            axiom evaluate [feedforward|recurrent|cpg]\n\
-           axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
+           axiom animate [feedforward|recurrent|cpg] [--task flat|rough|steps|recovery] [--frames N] [--fps N]\n\
            axiom gui [--host HOST] [--port PORT] [--checkpoint-dir DIR] [--check]\n\
-           axiom evolve [--task flat|rough|recovery] [--generations N] [--population N] [--steps N]\n\
+           axiom evolve [--task flat|rough|steps|recovery] [--pack rough-inspection]\n\
+                        [--generations N] [--population N] [--steps N]\n\
                         [--archive-width N] [--archive-height N] [--x-axis AXIS] [--y-axis AXIS]\n\
-                        [--classic] [--seed N] [--checkpoint PATH]\n"
+                        [--max-body-parts N] [--max-actuators N] [--rough-inspection-constraints]\n\
+                        [--classic] [--seed N] [--checkpoint PATH]\n\
+                        [--report-json PATH] [--report-md PATH]\n"
     );
 }

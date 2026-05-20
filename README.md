@@ -37,7 +37,7 @@ cargo run --example rough_terrain_benchmark
 
 ## Current Scope
 
-This is a working Rust foundation, not a full browser-backed physics app yet. The next natural layer is a web/server surface over the archive: config editing, archive grid browsing, replay selection, lineage history, and persistent checkpoints.
+The main product surface is now the archive/replay browser: start or load an evolution run, browse the MAP-Elites grid, select an occupied cell, inspect lineage and mutation details, and replay the selected elite in 2D or 3D.
 
 The `animate` command provides a terminal replay renderer over the same simulation loop:
 
@@ -46,7 +46,7 @@ cargo run -- animate cpg --task rough --frames 160 --fps 20
 cargo run -- animate feedforward --task flat --frames 80 --fps 30
 ```
 
-The `gui` command starts a local browser interface backed by Rust replay data:
+The `gui` command starts the local archive/replay browser backed by Rust replay data:
 
 ```sh
 cargo run -- gui
