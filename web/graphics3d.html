@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Axiom 3D Graphics Example</title>
-    <link rel="stylesheet" href="/graphics3d.css" />
+    <link rel="stylesheet" href="/graphics3d.css?v=2" />
   </head>
   <body>
     <main class="graphics-shell">
@@ -15,6 +15,24 @@
           <span>Objective</span>
           <strong>Test the evolved stride</strong>
           <small id="run-label">Evolving / rough / seed 29</small>
+          <div class="evolution-controls" aria-label="Evolved replay controls">
+            <label>
+              <span>Controller</span>
+              <select id="controller">
+                <option value="cpg">CPG</option>
+                <option value="feedforward">Feedforward</option>
+                <option value="recurrent">Recurrent</option>
+              </select>
+            </label>
+            <label>
+              <span>Terrain</span>
+              <select id="task">
+                <option value="rough">Rough</option>
+                <option value="flat">Flat</option>
+                <option value="recovery">Recovery</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div class="status-strip" aria-label="Replay status">
@@ -35,6 +53,7 @@
         <details class="field-log">
           <summary>Field Log</summary>
           <p id="field-note">Evolving a compact population before replay.</p>
+          <p id="controller-note" class="controller-note">CPG adds an alternating gait wave to neural joint commands.</p>
         </details>
 
         <div class="scene-actions" aria-label="Scene actions">
@@ -49,6 +68,6 @@
       </section>
     </main>
 
-    <script type="module" src="/graphics3d.js"></script>
+    <script type="module" src="/graphics3d.js?v=2"></script>
   </body>
 </html>

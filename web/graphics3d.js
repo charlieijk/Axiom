@@ -2,12 +2,15 @@ const THREE_MODULE_URL = "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three
 
 const canvas = document.getElementById("graphics-canvas");
 const ui = {
+  controller: document.getElementById("controller"),
+  task: document.getElementById("task"),
   playToggle: document.getElementById("play-toggle"),
   reroll: document.getElementById("reroll"),
   cameraMode: document.getElementById("camera-mode"),
   fxToggle: document.getElementById("fx-toggle"),
   runLabel: document.getElementById("run-label"),
   fieldNote: document.getElementById("field-note"),
+  controllerNote: document.getElementById("controller-note"),
   hint: document.getElementById("control-hint"),
   time: document.getElementById("metric-time"),
   distance: document.getElementById("metric-distance"),
@@ -39,6 +42,7 @@ const state = {
   cameraMode: "follow",
   effectsEnabled: true,
   hintFaded: false,
+  replayRequestId: 0,
 };
 
 const Y_AXIS = { x: 0, y: 1, z: 0 };
@@ -98,19 +102,34 @@ function start(THREE) {
   }
 
   async function fetchReplay() {
+    const requestId = state.replayRequestId + 1;
+    state.replayRequestId = requestId;
     const evolving = replayRequest.mode === "evolved";
     ui.fieldNote.textContent = evolving
-      ? `Evolving ${replayRequest.population} candidates for ${replayRequest.generations} generations.`
+      ? `Evolving ${replayRequest.population} ${labelFor(replayRequest.controller)} candidates for ${replayRequest.generations} generations on ${labelFor(replayRequest.task)} terrain.`
       : "Syncing replay data.";
+    ui.controllerNote.textContent = controllerBehaviorNote(replayRequest.controller);
     ui.reroll.disabled = true;
     try {
       const query = new URLSearchParams(replayRequest);
       const response = await fetch(`/api/replay?${query.toString()}`);
+      if (requestId !== state.replayRequestId) {
+        return;
+      }
       if (!response.ok) {
         throw new Error(`Replay request failed: ${response.status}`);
       }
 
-      state.replay = await response.json();
+      const replay = await response.json();
+      if (requestId !== state.replayRequestId) {
+        return;
+      }
+      state.replay = replay;
+      canvas.dataset.controller = state.replay.controller;
+      canvas.dataset.task = state.replay.task;
+      canvas.dataset.source = state.replay.source;
+      canvas.dataset.generations = String(state.replay.generations);
+      canvas.dataset.population = String(state.replay.population);
       state.frameIndex = 0;
       state.accumulator = 0;
       state.playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -124,8 +143,14 @@ function start(THREE) {
       scene.add(terrain.mesh);
       creature.rebuild(state.replay.body);
       updateMetrics();
+    } catch (error) {
+      if (requestId === state.replayRequestId) {
+        throw error;
+      }
     } finally {
-      ui.reroll.disabled = false;
+      if (requestId === state.replayRequestId) {
+        ui.reroll.disabled = false;
+      }
     }
   }
 
@@ -184,6 +209,12 @@ function start(THREE) {
       frame: state.frameIndex,
       bodies: state.replay ? state.replay.body.length : 0,
       source: state.replay ? state.replay.source : null,
+      controller: state.replay ? state.replay.controller : null,
+      task: state.replay ? state.replay.task : null,
+      requestController: replayRequest.controller,
+      requestTask: replayRequest.task,
+      generations: state.replay ? state.replay.generations : null,
+      population: state.replay ? state.replay.population : null,
       fitness: state.replay ? state.replay.fitness : null,
       bestDistance: state.replay ? state.replay.best_distance : null,
       stableDistance: state.replay ? state.replay.stable_distance : null,
@@ -751,6 +782,9 @@ function bindPointerInput(target) {
 }
 
 function bindActions(fetchReplay) {
+  ui.controller.value = replayRequest.controller;
+  ui.task.value = replayRequest.task;
+  ui.controllerNote.textContent = controllerBehaviorNote(replayRequest.controller);
   updateActionButtons();
   ui.playToggle.addEventListener("click", () => {
     state.playing = !state.playing;
@@ -777,6 +811,17 @@ function bindActions(fetchReplay) {
       console.error(error);
     });
   });
+
+  for (const control of [ui.controller, ui.task]) {
+    control.addEventListener("change", () => {
+      replayRequest.controller = ui.controller.value;
+      replayRequest.task = ui.task.value;
+      fetchReplay().catch((error) => {
+        ui.fieldNote.textContent = "Replay data failed to load.";
+        console.error(error);
+      });
+    });
+  }
 
   window.addEventListener("keydown", (event) => {
     if (event.code !== "Space") {
@@ -843,9 +888,19 @@ function replayRunLabel(replay) {
 function replayFieldNote(replay) {
   const bodyText = `${replay.body.length} body parts and ${Math.max(0, replay.body.length - 1)} joints`;
   if (replay.source !== "evolved") {
-    return `${bodyText}, replaying a seed genome across rough terrain.`;
+    return `${bodyText}, replaying a seed genome across ${labelFor(replay.task)} terrain.`;
   }
   return `Evolved ${replay.population} candidates over ${replay.generations} generations. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
+}
+
+function controllerBehaviorNote(controller) {
+  if (controller === "feedforward") {
+    return "Feedforward maps the current sensor vector directly to joint actuator commands.";
+  }
+  if (controller === "recurrent") {
+    return "Recurrent maps sensors plus prior outputs to the next joint actuator commands.";
+  }
+  return "CPG adds an alternating gait wave to neural joint commands; physics still comes from the simulator.";
 }
 
 function formatMetric(value, digits) {

@@ -27,6 +27,8 @@ const state = {
   playing: true,
   lastTick: performance.now(),
   accumulator: 0,
+  replayRequestId: 0,
+  lastRequestedReplayKey: "",
 };
 
 function resizeCanvas() {
@@ -39,18 +41,41 @@ function resizeCanvas() {
 }
 
 async function fetchReplay() {
+  const requestId = state.replayRequestId + 1;
+  state.replayRequestId = requestId;
   controls.status.textContent = "Loading";
   const query = new URLSearchParams({
+    mode: "minimal",
     controller: controls.controller.value,
     task: controls.task.value,
     seed: controls.seed.value,
     frames: controls.frames.value,
   });
-  const response = await fetch(`/api/replay?${query.toString()}`);
-  if (!response.ok) {
-    throw new Error(`Replay request failed: ${response.status}`);
+  let response;
+  let replay;
+  try {
+    response = await fetch(`/api/replay?${query.toString()}`);
+    if (requestId !== state.replayRequestId) {
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(`Replay request failed: ${response.status}`);
+    }
+    replay = await response.json();
+  } catch (error) {
+    if (requestId === state.replayRequestId) {
+      throw error;
+    }
+    return;
   }
-  state.replay = await response.json();
+  if (requestId !== state.replayRequestId) {
+    return;
+  }
+  state.replay = replay;
+  canvas.dataset.controller = state.replay.controller;
+  canvas.dataset.task = state.replay.task;
+  canvas.dataset.source = state.replay.source;
+  canvas.dataset.frames = String(state.replay.frames.length);
   state.frameIndex = 0;
   state.accumulator = 0;
   state.playing = true;
@@ -61,6 +86,29 @@ async function fetchReplay() {
   controls.status.textContent = "Ready";
   updateMetrics();
   draw();
+}
+
+function replayControlKey() {
+  return [
+    controls.controller.value,
+    controls.task.value,
+    controls.seed.value,
+    controls.frames.value,
+  ].join(":");
+}
+
+function requestReplay() {
+  state.lastRequestedReplayKey = replayControlKey();
+  fetchReplay().catch((error) => {
+    controls.status.textContent = "Error";
+    console.error(error);
+  });
+}
+
+function requestReplayIfChanged() {
+  if (replayControlKey() !== state.lastRequestedReplayKey) {
+    requestReplay();
+  }
 }
 
 function draw() {
@@ -270,12 +318,21 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-controls.generate.addEventListener("click", () => {
-  fetchReplay().catch((error) => {
-    controls.status.textContent = "Error";
-    console.error(error);
+controls.generate.addEventListener("click", requestReplay);
+
+for (const control of [controls.controller, controls.task]) {
+  control.addEventListener("change", requestReplayIfChanged);
+}
+
+for (const control of [controls.seed, controls.frames]) {
+  control.addEventListener("change", requestReplayIfChanged);
+  control.addEventListener("blur", requestReplayIfChanged);
+  control.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      requestReplayIfChanged();
+    }
   });
-});
+}
 
 controls.play.addEventListener("click", () => {
   state.playing = !state.playing;
@@ -301,10 +358,20 @@ controls.scrubber.addEventListener("input", () => {
   draw();
 });
 
+window.render_game_to_text = () =>
+  JSON.stringify({
+    ready: Boolean(state.replay),
+    frame: state.frameIndex,
+    selectedController: controls.controller.value,
+    selectedTask: controls.task.value,
+    controller: state.replay ? state.replay.controller : null,
+    task: state.replay ? state.replay.task : null,
+    source: state.replay ? state.replay.source : null,
+    frames: state.replay ? state.replay.frames.length : 0,
+    bodies: state.replay ? state.replay.body.length : 0,
+  });
+
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
-fetchReplay().catch((error) => {
-  controls.status.textContent = "Error";
-  console.error(error);
-});
+requestReplay();
 requestAnimationFrame(tick);

@@ -382,6 +382,7 @@ fn replay_json(request: ReplayRequest) -> String {
                 generations: request.generations,
                 evaluation_steps: request.evaluation_steps,
                 task: request.task,
+                controller: Some(request.controller),
                 search_mode: SearchMode::MapElites,
                 ..EvolutionConfig::default()
             })
@@ -537,6 +538,24 @@ mod tests {
         };
 
         assert!(validate_replay_request(&request).is_ok());
+    }
+
+    #[test]
+    fn evolved_replay_honors_requested_controller() {
+        let json = replay_json(ReplayRequest {
+            mode: ReplayMode::Evolved,
+            controller: crate::policy::ControllerKind::Recurrent,
+            population_size: 4,
+            generations: 1,
+            evaluation_steps: 20,
+            frames: 1,
+            ..ReplayRequest::default()
+        });
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("replay should serialize as JSON");
+
+        assert_eq!(value["source"], "evolved");
+        assert_eq!(value["controller"], "recurrent");
     }
 
     #[test]

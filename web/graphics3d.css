@@ -33,7 +33,8 @@ body {
 }
 
 button,
-a {
+a,
+select {
   font: inherit;
 }
 
@@ -105,6 +106,48 @@ a {
   font-weight: 800;
 }
 
+.evolution-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.evolution-controls label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.evolution-controls label span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.evolution-controls select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid rgba(219, 238, 211, 0.2);
+  border-radius: 8px;
+  background: rgba(7, 14, 12, 0.82);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.evolution-controls select:hover,
+.evolution-controls select:focus {
+  border-color: rgba(232, 196, 111, 0.72);
+  outline: none;
+}
+
 .status-strip {
   position: absolute;
   top: 18px;
@@ -135,7 +178,7 @@ a {
 
 .field-log {
   position: absolute;
-  top: 104px;
+  top: 170px;
   left: 18px;
   max-width: min(300px, calc(100vw - 36px));
   border: 1px solid var(--line);
@@ -161,6 +204,11 @@ a {
   color: var(--text);
   font-size: 13px;
   line-height: 1.38;
+}
+
+.field-log .controller-note {
+  color: #d7e8d2;
+  font-size: 12px;
 }
 
 .scene-actions {
@@ -262,7 +310,7 @@ a {
   }
 
   .field-log {
-    top: 92px;
+    top: 156px;
     left: 12px;
     max-width: min(250px, calc(100vw - 24px));
   }
@@ -296,7 +344,7 @@ a {
   }
 
   .field-log {
-    top: 88px;
+    top: 164px;
   }
 
   .status-strip {

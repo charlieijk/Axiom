@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::fitness::{Evaluation, TaskKind, evaluate};
-use crate::genome::Genome;
+use crate::genome::{Genome, NeuralGenome, controller_input_count};
 use crate::policy::ControllerKind;
 use crate::qd::{Archive, Axis};
 use crate::rng::Rng;
@@ -19,6 +19,7 @@ pub struct EvolutionConfig {
     pub generations: usize,
     pub evaluation_steps: usize,
     pub task: TaskKind,
+    pub controller: Option<ControllerKind>,
     pub search_mode: SearchMode,
     pub archive_width: usize,
     pub archive_height: usize,
@@ -32,6 +33,7 @@ impl Default for EvolutionConfig {
             generations: 20,
             evaluation_steps: 240,
             task: TaskKind::RoughTerrain,
+            controller: None,
             search_mode: SearchMode::MapElites,
             archive_width: 12,
             archive_height: 8,
@@ -89,11 +91,11 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     let mut rng = Rng::new(config.seed);
     let mut population: Vec<Genome> = (0..config.population_size)
         .map(|index| {
-            let controller = match index % 3 {
+            let controller = config.controller.unwrap_or_else(|| match index % 3 {
                 0 => ControllerKind::FeedForward,
                 1 => ControllerKind::Recurrent,
                 _ => ControllerKind::Cpg,
-            };
+            });
             Genome::minimal(controller, &mut rng)
         })
         .collect();
@@ -142,7 +144,11 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
             } else {
                 elites[rng.range_usize(elites.len())].clone()
             };
-            next_population.push(parent.mutate(&mut rng));
+            let mut child = parent.mutate(&mut rng);
+            if let Some(controller) = config.controller {
+                force_controller(&mut child, controller, &mut rng);
+            }
+            next_population.push(child);
         }
 
         population = next_population;
@@ -156,8 +162,24 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     })
 }
 
+fn force_controller(genome: &mut Genome, controller: ControllerKind, rng: &mut Rng) {
+    let input_count = controller_input_count(&genome.body, controller);
+    let output_count = genome.body.output_count();
+    if genome.controller == controller
+        && genome.brain.input_count == input_count
+        && genome.brain.output_count == output_count
+    {
+        return;
+    }
+
+    genome.controller = controller;
+    genome.brain = NeuralGenome::minimal(input_count, output_count, rng);
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::policy::ControllerKind;
+
     use super::{EvolutionConfig, SearchMode, run_evolution};
 
     #[test]
@@ -184,5 +206,25 @@ mod tests {
         .expect_err("zero population should be rejected");
 
         assert_eq!(error.to_string(), "population must be greater than zero");
+    }
+
+    #[test]
+    fn fixed_controller_evolution_keeps_requested_controller() {
+        let report = run_evolution(EvolutionConfig {
+            controller: Some(ControllerKind::Cpg),
+            population_size: 8,
+            generations: 2,
+            evaluation_steps: 20,
+            ..EvolutionConfig::default()
+        })
+        .expect("valid config should run");
+
+        assert_eq!(report.best_genome.controller, ControllerKind::Cpg);
+        assert!(
+            report
+                .archive
+                .elites()
+                .all(|elite| elite.genome.controller == ControllerKind::Cpg)
+        );
     }
 }
