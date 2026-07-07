@@ -37,7 +37,7 @@ cargo run --example rough_terrain_benchmark
 
 ## Current Scope
 
-This is a working Rust foundation, not a full browser-backed physics app yet. The next natural layer is a web/server surface over the archive: config editing, archive grid browsing, replay selection, lineage history, and persistent checkpoints.
+The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. The next natural layer is archive grid browsing, lineage history, and persistent checkpoints in the UI.
 
 The `animate` command provides a terminal replay renderer over the same simulation loop:
 
