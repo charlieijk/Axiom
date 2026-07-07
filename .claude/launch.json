@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gui",
+      "runtimeExecutable": "cargo",
+      "runtimeArgs": [
+        "run",
+        "--",
+        "gui"
+      ],
+      "port": 8787
+    }
+  ]
+}
