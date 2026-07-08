@@ -208,6 +208,50 @@ mod tests {
         assert_eq!(error.to_string(), "population must be greater than zero");
     }
 
+    fn small_run(seed: u64) -> super::EvolutionReport {
+        run_evolution(EvolutionConfig {
+            seed,
+            population_size: 12,
+            generations: 4,
+            evaluation_steps: 40,
+            search_mode: SearchMode::MapElites,
+            ..EvolutionConfig::default()
+        })
+        .expect("valid config should run")
+    }
+
+    #[test]
+    fn evolution_is_deterministic_for_a_fixed_seed() {
+        let a = small_run(2024);
+        let b = small_run(2024);
+
+        // Same seed must reproduce the whole observable outcome bit-for-bit:
+        // best fitness, the winning creature's behaviour metrics, and the
+        // shape of the quality-diversity archive.
+        assert_eq!(a.best_evaluation.fitness, b.best_evaluation.fitness);
+        assert_eq!(a.best_evaluation.steps, b.best_evaluation.steps);
+        assert_eq!(
+            a.best_evaluation.metrics.stable_distance,
+            b.best_evaluation.metrics.stable_distance
+        );
+        assert_eq!(a.best_evaluation.metrics.body_count, b.best_evaluation.metrics.body_count);
+        assert_eq!(a.archive.occupied_count(), b.archive.occupied_count());
+        assert_eq!(a.archive.coverage(), b.archive.coverage());
+    }
+
+    #[test]
+    fn evolution_diverges_across_seeds() {
+        // If the seed were ignored, every run would be identical. Across a
+        // spread of seeds at least one observable must differ.
+        let baseline = small_run(1);
+        let differs = [2u64, 3, 4, 5].iter().any(|&seed| {
+            let other = small_run(seed);
+            other.best_evaluation.fitness != baseline.best_evaluation.fitness
+                || other.archive.occupied_count() != baseline.archive.occupied_count()
+        });
+        assert!(differs, "changing the seed changed nothing — determinism has collapsed to a constant");
+    }
+
     #[test]
     fn fixed_controller_evolution_keeps_requested_controller() {
         let report = run_evolution(EvolutionConfig {
