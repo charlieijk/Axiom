@@ -52,3 +52,7 @@ The `gui` command starts a local browser interface backed by Rust replay data:
 cargo run -- gui
 open http://127.0.0.1:8787
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
