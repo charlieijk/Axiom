@@ -91,7 +91,7 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     let mut rng = Rng::new(config.seed);
     let mut population: Vec<Genome> = (0..config.population_size)
         .map(|index| {
-            let controller = config.controller.unwrap_or_else(|| match index % 3 {
+            let controller = config.controller.unwrap_or(match index % 3 {
                 0 => ControllerKind::FeedForward,
                 1 => ControllerKind::Recurrent,
                 _ => ControllerKind::Cpg,
@@ -234,7 +234,10 @@ mod tests {
             a.best_evaluation.metrics.stable_distance,
             b.best_evaluation.metrics.stable_distance
         );
-        assert_eq!(a.best_evaluation.metrics.body_count, b.best_evaluation.metrics.body_count);
+        assert_eq!(
+            a.best_evaluation.metrics.body_count,
+            b.best_evaluation.metrics.body_count
+        );
         assert_eq!(a.archive.occupied_count(), b.archive.occupied_count());
         assert_eq!(a.archive.coverage(), b.archive.coverage());
     }
@@ -249,7 +252,10 @@ mod tests {
             other.best_evaluation.fitness != baseline.best_evaluation.fitness
                 || other.archive.occupied_count() != baseline.archive.occupied_count()
         });
-        assert!(differs, "changing the seed changed nothing — determinism has collapsed to a constant");
+        assert!(
+            differs,
+            "changing the seed changed nothing — determinism has collapsed to a constant"
+        );
     }
 
     #[test]
