@@ -373,3 +373,14 @@ select {
     display: none;
   }
 }
+.evolution-progress { position: absolute; right: 18px; top: 18px; width: min(360px, calc(100vw - 36px)); border: 1px solid var(--line); border-radius: 8px; background: rgba(9, 15, 13, .78); padding: 11px 12px 9px; backdrop-filter: blur(12px); }
+.evolution-progress > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.evolution-progress span { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.evolution-progress strong { color: var(--text); font-size: 10px; text-align: right; }
+#evolution-chart { display: block; width: 100%; height: 88px; margin-top: 7px; }
+.evolution-legend { display: flex; flex-wrap: wrap; gap: 10px; }
+.evolution-legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 8px; }
+.evolution-legend i { width: 14px; height: 2px; background: #f2b84b; }
+.evolution-legend .mean-line { background: #8eea9f; }
+.evolution-legend .coverage-line { background: #80b7ea; }
+@media (max-width: 720px) { .evolution-progress { top: auto; right: 12px; bottom: 70px; left: 12px; width: auto; } #evolution-chart { height: 62px; } }

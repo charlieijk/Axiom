@@ -56,6 +56,12 @@
           <p id="controller-note" class="controller-note">CPG adds an alternating gait wave to neural joint commands.</p>
         </details>
 
+        <section class="evolution-progress" aria-label="Evolution progress">
+          <div><span>Evolution progress</span><strong id="evolution-summary">Waiting for search</strong></div>
+          <canvas id="evolution-chart" width="620" height="180" aria-label="Fitness and archive coverage by generation"></canvas>
+          <div class="evolution-legend"><span><i class="fitness-line"></i>Best fitness</span><span><i class="mean-line"></i>Mean fitness</span><span><i class="coverage-line"></i>Archive coverage</span></div>
+        </section>
+
         <div class="scene-actions" aria-label="Scene actions">
           <button id="play-toggle" type="button">Pause</button>
           <button id="reroll" type="button">Evolve</button>

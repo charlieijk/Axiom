@@ -83,6 +83,16 @@ pub struct EvolutionReport {
     pub best_evaluation: Evaluation,
     pub archive: Archive,
     pub generations: usize,
+    pub history: Vec<GenerationSummary>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GenerationSummary {
+    pub generation: usize,
+    pub best_fitness: f32,
+    pub mean_fitness: f32,
+    pub archive_coverage: f32,
+    pub occupied_cells: usize,
 }
 
 pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, EvolutionConfigError> {
@@ -108,8 +118,9 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     );
     let mut best_genome = population[0].clone();
     let mut best_evaluation = evaluate(&best_genome, config.task, config.evaluation_steps);
+    let mut history = Vec::with_capacity(config.generations);
 
-    for _ in 0..config.generations {
+    for generation in 0..config.generations {
         let mut scored = Vec::with_capacity(population.len());
         for genome in population {
             let evaluation = evaluate(&genome, config.task, config.evaluation_steps);
@@ -125,6 +136,19 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
             b.1.fitness
                 .partial_cmp(&a.1.fitness)
                 .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mean_fitness = scored
+            .iter()
+            .map(|(_, evaluation)| evaluation.fitness)
+            .sum::<f32>()
+            / scored.len() as f32;
+        history.push(GenerationSummary {
+            generation: generation + 1,
+            best_fitness: best_evaluation.fitness,
+            mean_fitness,
+            archive_coverage: archive.coverage(),
+            occupied_cells: archive.occupied_count(),
         });
 
         let elite_count = (config.population_size / 4).max(1);
@@ -159,6 +183,7 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
         best_evaluation,
         archive,
         generations: config.generations,
+        history,
     })
 }
 
@@ -195,6 +220,9 @@ mod tests {
 
         assert!(report.archive.occupied_count() > 0);
         assert!(report.best_evaluation.fitness.is_finite());
+        assert_eq!(report.history.len(), 2);
+        assert_eq!(report.history[0].generation, 1);
+        assert!(report.history[1].archive_coverage >= report.history[0].archive_coverage);
     }
 
     #[test]

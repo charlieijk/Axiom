@@ -93,9 +93,19 @@ struct ReplayResponse {
     uprightness: f32,
     stability: f32,
     terminal_tilt: f32,
+    evolution_history: Vec<ReplayGenerationResponse>,
     dt: f32,
     body: Vec<ReplayBodyNode>,
     frames: Vec<ReplayFrameResponse>,
+}
+
+#[derive(Serialize)]
+struct ReplayGenerationResponse {
+    generation: usize,
+    best_fitness: f32,
+    mean_fitness: f32,
+    archive_coverage: f32,
+    occupied_cells: usize,
 }
 
 #[derive(Serialize)]
@@ -368,12 +378,12 @@ fn replay_error_json(error: ReplayRequestError) -> String {
 }
 
 fn replay_json(request: ReplayRequest) -> String {
-    let (genome, evaluation, generations, population_size) = match request.mode {
+    let (genome, evaluation, generations, population_size, evolution_history) = match request.mode {
         ReplayMode::Minimal => {
             let mut rng = Rng::new(request.seed);
             let genome = Genome::minimal(request.controller, &mut rng);
             let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
-            (genome, evaluation, 0, 1)
+            (genome, evaluation, 0, 1, Vec::new())
         }
         ReplayMode::Evolved => {
             let report = run_evolution(EvolutionConfig {
@@ -387,11 +397,13 @@ fn replay_json(request: ReplayRequest) -> String {
                 ..EvolutionConfig::default()
             })
             .expect("validated replay evolution config should be valid");
+            let history = report.history;
             (
                 report.best_genome,
                 report.best_evaluation,
                 request.generations,
                 request.population_size,
+                history,
             )
         }
     };
@@ -410,6 +422,16 @@ fn replay_json(request: ReplayRequest) -> String {
         uprightness: evaluation.metrics.uprightness,
         stability: evaluation.metrics.stability,
         terminal_tilt: evaluation.metrics.terminal_tilt,
+        evolution_history: evolution_history
+            .into_iter()
+            .map(|generation| ReplayGenerationResponse {
+                generation: generation.generation,
+                best_fitness: generation.best_fitness,
+                mean_fitness: generation.mean_fitness,
+                archive_coverage: generation.archive_coverage,
+                occupied_cells: generation.occupied_cells,
+            })
+            .collect(),
         dt: request.dt,
         body: genome
             .body
@@ -556,6 +578,8 @@ mod tests {
 
         assert_eq!(value["source"], "evolved");
         assert_eq!(value["controller"], "recurrent");
+        assert_eq!(value["evolution_history"].as_array().map(Vec::len), Some(1));
+        assert!(value["evolution_history"][0]["best_fitness"].is_number());
     }
 
     #[test]

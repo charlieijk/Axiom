@@ -15,6 +15,8 @@ const ui = {
   time: document.getElementById("metric-time"),
   distance: document.getElementById("metric-distance"),
   tilt: document.getElementById("metric-tilt"),
+  evolutionChart: document.getElementById("evolution-chart"),
+  evolutionSummary: document.getElementById("evolution-summary"),
 };
 
 const replayRequest = {
@@ -136,6 +138,7 @@ function start(THREE) {
       updateActionButtons();
       ui.runLabel.textContent = replayRunLabel(state.replay);
       ui.fieldNote.textContent = replayFieldNote(state.replay);
+      renderEvolutionProgress(state.replay.evolution_history || []);
 
       scene.remove(terrain.mesh);
       terrain.dispose();
@@ -891,6 +894,63 @@ function replayFieldNote(replay) {
     return `${bodyText}, replaying a seed genome across ${labelFor(replay.task)} terrain.`;
   }
   return `Evolved ${replay.population} candidates over ${replay.generations} generations. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
+}
+
+function renderEvolutionProgress(history) {
+  const chart = ui.evolutionChart;
+  const context = chart.getContext("2d");
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = chart.clientWidth || 310;
+  const height = chart.clientHeight || 90;
+  chart.width = Math.max(1, Math.floor(width * ratio));
+  chart.height = Math.max(1, Math.floor(height * ratio));
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+
+  if (!history.length) {
+    ui.evolutionSummary.textContent = "Seed genome · no search history";
+    return;
+  }
+
+  const padding = { left: 10, right: 10, top: 10, bottom: 12 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const fitnessValues = history.flatMap((point) => [point.best_fitness, point.mean_fitness]);
+  const minFitness = Math.min(...fitnessValues);
+  const maxFitness = Math.max(...fitnessValues);
+  const fitnessRange = Math.max(0.001, maxFitness - minFitness);
+  const x = (index) => padding.left + (history.length === 1 ? plotWidth / 2 : (index / (history.length - 1)) * plotWidth);
+  const fitnessY = (value) => padding.top + plotHeight - ((value - minFitness) / fitnessRange) * plotHeight;
+  const coverageY = (value) => padding.top + plotHeight - value * plotHeight;
+
+  context.strokeStyle = "rgba(220, 239, 226, .15)";
+  context.lineWidth = 1;
+  for (let row = 0; row <= 3; row += 1) {
+    const y = padding.top + (row / 3) * plotHeight;
+    context.beginPath(); context.moveTo(padding.left, y); context.lineTo(width - padding.right, y); context.stroke();
+  }
+  drawEvolutionLine(context, history, x, (point) => fitnessY(point.best_fitness), "#f2b84b", 2.2);
+  drawEvolutionLine(context, history, x, (point) => fitnessY(point.mean_fitness), "#8eea9f", 1.6);
+  drawEvolutionLine(context, history, x, (point) => coverageY(point.archive_coverage), "#80b7ea", 1.4);
+
+  const first = history[0];
+  const last = history.at(-1);
+  const gain = last.best_fitness - first.best_fitness;
+  ui.evolutionSummary.textContent = `Gen ${last.generation} · fitness ${formatMetric(last.best_fitness, 2)} · ${gain >= 0 ? "+" : ""}${formatMetric(gain, 2)} gain · ${Math.round(last.archive_coverage * 100)}% coverage`;
+}
+
+function drawEvolutionLine(context, history, x, y, color, lineWidth) {
+  context.beginPath();
+  history.forEach((point, index) => {
+    const px = x(index);
+    const py = y(point);
+    if (index === 0) context.moveTo(px, py); else context.lineTo(px, py);
+  });
+  context.strokeStyle = color;
+  context.lineWidth = lineWidth;
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.stroke();
 }
 
 function controllerBehaviorNote(controller) {
