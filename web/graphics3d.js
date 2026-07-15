@@ -17,6 +17,27 @@ const ui = {
   tilt: document.getElementById("metric-tilt"),
   evolutionChart: document.getElementById("evolution-chart"),
   evolutionSummary: document.getElementById("evolution-summary"),
+  generationTitle: document.getElementById("generation-title"),
+  generationTerrain: document.getElementById("generation-terrain"),
+  changeNarrative: document.getElementById("change-narrative"),
+  deltaStride: document.getElementById("delta-stride"),
+  deltaStrideNote: document.getElementById("delta-stride-note"),
+  deltaGeometry: document.getElementById("delta-geometry"),
+  deltaGeometryNote: document.getElementById("delta-geometry-note"),
+  deltaControl: document.getElementById("delta-control"),
+  deltaControlNote: document.getElementById("delta-control-note"),
+  lineageChart: document.getElementById("lineage-chart"),
+  lineageCaption: document.getElementById("lineage-caption"),
+  timelineChart: document.getElementById("timeline-chart"),
+  generationRail: document.getElementById("generation-rail"),
+  selectedGeneration: document.getElementById("selected-generation"),
+  selectedFitness: document.getElementById("selected-fitness"),
+  selectedCoverage: document.getElementById("selected-coverage"),
+  currentGenerationLabel: document.getElementById("current-generation-label"),
+  previousGenerationLabel: document.getElementById("previous-generation-label"),
+  loadingState: document.getElementById("loading-state"),
+  loadingTitle: document.getElementById("loading-title"),
+  loadingDetail: document.getElementById("loading-detail"),
 };
 
 const replayRequest = {
@@ -42,9 +63,11 @@ const state = {
   dragStart: { x: 0, y: 0 },
   dragOrbit: { yaw: 0, pitch: 0 },
   cameraMode: "follow",
+  cameraZoom: 1,
   effectsEnabled: true,
   hintFaded: false,
   replayRequestId: 0,
+  selectedGenerationIndex: null,
 };
 
 const Y_AXIS = { x: 0, y: 1, z: 0 };
@@ -107,6 +130,13 @@ function start(THREE) {
     const requestId = state.replayRequestId + 1;
     state.replayRequestId = requestId;
     const evolving = replayRequest.mode === "evolved";
+    setLoadingState("loading");
+    ui.loadingTitle.textContent = evolving
+      ? `Evolving generation ${replayRequest.generations}`
+      : "Preparing replay";
+    ui.loadingDetail.textContent = evolving
+      ? `Searching ${replayRequest.population} candidate bodies on ${labelFor(replayRequest.task)} terrain`
+      : "Compiling the selected genome";
     ui.fieldNote.textContent = evolving
       ? `Evolving ${replayRequest.population} ${labelFor(replayRequest.controller)} candidates for ${replayRequest.generations} generations on ${labelFor(replayRequest.task)} terrain.`
       : "Syncing replay data.";
@@ -139,6 +169,11 @@ function start(THREE) {
       ui.runLabel.textContent = replayRunLabel(state.replay);
       ui.fieldNote.textContent = replayFieldNote(state.replay);
       renderEvolutionProgress(state.replay.evolution_history || []);
+      renderFieldJournal(state.replay);
+      state.selectedGenerationIndex = Math.max(0, (state.replay.evolution_history || []).length - 1);
+      renderGenerationTimeline(state.replay.evolution_history || []);
+      renderLineage(state.replay.evolution_history || []);
+      setLoadingState("ready");
 
       scene.remove(terrain.mesh);
       terrain.dispose();
@@ -148,6 +183,9 @@ function start(THREE) {
       updateMetrics();
     } catch (error) {
       if (requestId === state.replayRequestId) {
+        setLoadingState("error");
+        ui.loadingTitle.textContent = "Evolution run interrupted";
+        ui.loadingDetail.textContent = "Try the generation again or choose a lighter terrain task.";
         throw error;
       }
     } finally {
@@ -189,6 +227,14 @@ function start(THREE) {
   }
 
   window.addEventListener("resize", resize);
+  window.addEventListener("resize", () => {
+    if (!state.replay) {
+      return;
+    }
+    renderEvolutionProgress(state.replay.evolution_history || []);
+    renderGenerationTimeline(state.replay.evolution_history || [], { preserveButtons: true });
+    renderLineage(state.replay.evolution_history || []);
+  });
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
     ui.fieldNote.textContent = "WebGL context lost.";
@@ -224,9 +270,21 @@ function start(THREE) {
       stability: state.replay ? state.replay.stability : null,
       cameraMode: state.cameraMode,
       effectsEnabled: state.effectsEnabled,
+      selectedGeneration: state.replay?.evolution_history?.[state.selectedGenerationIndex]?.generation ?? null,
       width: canvas.width,
       height: canvas.height,
     });
+
+  window.axiomFieldJournalSnapshot = () => ({
+    ready: Boolean(state.replay),
+    generation: state.replay?.generations ?? null,
+    selectedGeneration: state.replay?.evolution_history?.[state.selectedGenerationIndex]?.generation ?? null,
+    controller: state.replay?.controller ?? null,
+    terrain: state.replay?.task ?? null,
+    fitness: state.replay?.fitness ?? null,
+    archiveCoverage: state.replay?.evolution_history?.at(-1)?.archive_coverage ?? null,
+    loading: ui.loadingState.classList.contains("is-visible"),
+  });
 }
 
 function createSceneParts(THREE, scene) {
@@ -731,8 +789,9 @@ function updateCamera(camera, frame, task, deltaSeconds, scratch) {
   const yaw = state.cameraMode === "showcase" ? showcaseYaw : state.orbitYaw;
   const targetLead =
     state.cameraMode === "orbit" ? 0.15 : portrait ? 0.22 : state.cameraMode === "showcase" ? 0.45 : 1.15;
-  const radius =
-    state.cameraMode === "showcase" ? (portrait ? 11.2 : 8.1) : state.cameraMode === "orbit" ? (portrait ? 10.6 : 7.4) : portrait ? 10.2 : 6.4;
+  const radius = (
+    state.cameraMode === "showcase" ? (portrait ? 11.2 : 8.1) : state.cameraMode === "orbit" ? (portrait ? 10.6 : 7.4) : portrait ? 10.2 : 6.4
+  ) * state.cameraZoom;
   const sideOffset =
     state.cameraMode === "orbit" ? 0 : state.cameraMode === "showcase" ? Math.sin(frame.time * 0.21) * 1.4 : portrait ? -0.78 : -3.15;
   const cameraHeight =
@@ -782,6 +841,12 @@ function bindPointerInput(target) {
   target.addEventListener("pointercancel", () => {
     state.dragging = false;
   });
+
+  target.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    state.cameraZoom = clamp(state.cameraZoom + event.deltaY * 0.0008, 0.68, 1.48);
+    fadeHint();
+  }, { passive: false });
 }
 
 function bindActions(fetchReplay) {
@@ -808,7 +873,7 @@ function bindActions(fetchReplay) {
   });
 
   ui.reroll.addEventListener("click", () => {
-    replayRequest.seed += 1;
+    replayRequest.generations = Math.min(40, replayRequest.generations + 1);
     fetchReplay().catch((error) => {
       ui.fieldNote.textContent = "Replay data failed to load.";
       console.error(error);
@@ -837,12 +902,27 @@ function bindActions(fetchReplay) {
 }
 
 function updateActionButtons() {
-  ui.playToggle.textContent = state.playing ? "Pause" : "Play";
-  ui.reroll.textContent = replayRequest.mode === "evolved" ? "Evolve" : "Reroll";
-  ui.cameraMode.textContent = CAMERA_LABELS[state.cameraMode];
-  ui.fxToggle.textContent = state.effectsEnabled ? "Full FX" : "Lite FX";
+  setActionButton(ui.playToggle, state.playing ? "Pause" : "Play", state.playing ? "ph-pause" : "ph-play");
+  setActionButton(ui.cameraMode, CAMERA_LABELS[state.cameraMode], "ph-video-camera");
+  setActionButton(ui.fxToggle, state.effectsEnabled ? "Full FX" : "Lite FX", "ph-sparkle");
+  const evolveLabel = replayRequest.mode === "evolved" ? "Evolve next generation" : "Generate replay";
+  const evolveText = ui.reroll.querySelector("span");
+  if (evolveText) {
+    evolveText.textContent = evolveLabel;
+  }
   ui.cameraMode.classList.toggle("is-active", state.cameraMode !== "follow");
   ui.fxToggle.classList.toggle("is-active", state.effectsEnabled);
+}
+
+function setActionButton(button, label, iconClass) {
+  const text = button.querySelector("span");
+  const icon = button.querySelector("i");
+  if (text) {
+    text.textContent = label;
+  }
+  if (icon) {
+    icon.className = `ph ${iconClass}`;
+  }
 }
 
 function updateMetrics() {
@@ -875,6 +955,9 @@ function seededNoise(value) {
 }
 
 function labelFor(value) {
+  if (value === "cpg") {
+    return "CPG";
+  }
   return value
     .split(/[-_]/)
     .filter(Boolean)
@@ -896,15 +979,218 @@ function replayFieldNote(replay) {
   return `Evolved ${replay.population} candidates over ${replay.generations} generations. Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
 }
 
-function renderEvolutionProgress(history) {
-  const chart = ui.evolutionChart;
+function setLoadingState(status) {
+  const visible = status !== "ready";
+  ui.loadingState.classList.toggle("is-visible", visible);
+  ui.loadingState.classList.toggle("is-error", status === "error");
+  ui.reroll.disabled = status === "loading";
+}
+
+function renderFieldJournal(replay) {
+  const history = replay.evolution_history || [];
+  const first = history[0];
+  const last = history.at(-1);
+  const fitnessGain = last && first
+    ? last.best_fitness - first.best_fitness
+    : 0;
+  const averageScale = replay.body.length
+    ? replay.body.reduce((sum, node) => sum + node.size[0] + node.size[1], 0) / (replay.body.length * 2)
+    : 0;
+  const terrain = labelFor(replay.task);
+  const controller = labelFor(replay.controller);
+
+  ui.generationTitle.textContent = `Generation ${replay.generations}`;
+  ui.generationTerrain.textContent = terrain === "Rough" ? "Rough terrain" : terrain;
+  ui.currentGenerationLabel.textContent = `GEN ${replay.generations} (CURRENT)`;
+  ui.previousGenerationLabel.textContent = `GEN ${Math.max(1, replay.generations - 1)} (PREVIOUS)`;
+  ui.changeNarrative.textContent = `Selection favored forward travel without surrendering stability on ${terrain.toLowerCase()} terrain. The current champion balances ${replay.body.length} body segments through a ${controller} controller, converting a stable distance of ${formatMetric(replay.stable_distance, 2)} into repeatable progress.`;
+  ui.deltaStride.textContent = `${fitnessGain >= 0 ? "+" : ""}${formatMetric(fitnessGain, 2)} total fitness gain`;
+  ui.deltaStrideNote.textContent = first
+    ? `Improved from ${formatMetric(first.best_fitness, 2)} to ${formatMetric(last.best_fitness, 2)} across the active search.`
+    : "Establishing the first comparable champion.";
+  ui.deltaGeometry.textContent = `${replay.body.length}-part morphology selected`;
+  ui.deltaGeometryNote.textContent = `Mean body scale ${formatMetric(averageScale, 2)} with ${Math.max(0, replay.body.length - 1)} articulated joints.`;
+  ui.deltaControl.textContent = `${controller} stability ${formatMetric(replay.stability, 2)}`;
+  ui.deltaControlNote.textContent = controllerBehaviorNote(replay.controller);
+  ui.lineageCaption.textContent = `${history.length} generations · ${last?.occupied_cells ?? 0} archive cells`;
+}
+
+function renderGenerationTimeline(history, options = {}) {
+  const { preserveButtons = false } = options;
+  if (!history.length) {
+    ui.generationRail.replaceChildren();
+    drawTimelineChart(history);
+    return;
+  }
+
+  if (!preserveButtons || ui.generationRail.childElementCount !== history.length) {
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < history.length; index += 1) {
+      const point = history[index];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = String(point.generation);
+      button.dataset.generationIndex = String(index);
+      button.setAttribute("aria-label", `Inspect generation ${point.generation}`);
+      button.addEventListener("click", () => selectGeneration(index));
+      fragment.appendChild(button);
+    }
+    ui.generationRail.replaceChildren(fragment);
+    ui.generationRail.style.setProperty("--generation-count", String(history.length));
+  }
+
+  const selected = clamp(
+    state.selectedGenerationIndex ?? history.length - 1,
+    0,
+    history.length - 1,
+  );
+  state.selectedGenerationIndex = selected;
+  const buttons = ui.generationRail.querySelectorAll("button");
+  buttons.forEach((button, index) => {
+    const isSelected = index === selected;
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  });
+  updateSelectedGeneration(history[selected]);
+  drawTimelineChart(history);
+}
+
+function selectGeneration(index) {
+  const history = state.replay?.evolution_history || [];
+  if (!history[index]) {
+    return;
+  }
+  state.selectedGenerationIndex = index;
+  renderGenerationTimeline(history, { preserveButtons: true });
+}
+
+function updateSelectedGeneration(point) {
+  if (!point) {
+    ui.selectedGeneration.textContent = "NO GENERATION";
+    ui.selectedFitness.textContent = "Fitness --";
+    ui.selectedCoverage.textContent = "Coverage --";
+    return;
+  }
+  ui.selectedGeneration.textContent = `GEN ${point.generation}`;
+  ui.selectedFitness.textContent = `Fitness ${formatMetric(point.best_fitness, 2)}`;
+  ui.selectedCoverage.textContent = `Coverage ${Math.round(point.archive_coverage * 100)}%`;
+}
+
+function drawTimelineChart(history) {
+  const { context, width, height } = prepareCanvas(ui.timelineChart);
+  context.clearRect(0, 0, width, height);
+  if (!history.length) {
+    return;
+  }
+
+  const padding = { left: 8, right: 10, top: 10, bottom: 10 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const fitnessValues = history.map((point) => point.best_fitness);
+  const minFitness = Math.min(...fitnessValues);
+  const maxFitness = Math.max(...fitnessValues);
+  const fitnessRange = Math.max(0.001, maxFitness - minFitness);
+  const x = (index) => padding.left + (history.length === 1 ? plotWidth / 2 : (index / (history.length - 1)) * plotWidth);
+  const fitnessY = (value) => padding.top + plotHeight * 0.43 - ((value - minFitness) / fitnessRange) * plotHeight * 0.31;
+  const coverageY = (value) => padding.top + plotHeight - value * plotHeight * 0.78;
+
+  context.strokeStyle = "rgba(204, 222, 196, .13)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(padding.left, height * 0.5);
+  context.lineTo(width - padding.right, height * 0.5);
+  context.stroke();
+  drawEvolutionLine(context, history, x, (point) => fitnessY(point.best_fitness), "#f0b943", 1.8);
+  drawEvolutionLine(context, history, x, (point) => coverageY(point.archive_coverage), "#77aee7", 1.5);
+
+  const selected = clamp(state.selectedGenerationIndex ?? history.length - 1, 0, history.length - 1);
+  const selectedX = x(selected);
+  context.strokeStyle = "rgba(163, 232, 127, .72)";
+  context.beginPath();
+  context.moveTo(selectedX, 0);
+  context.lineTo(selectedX, height);
+  context.stroke();
+  for (const [value, color] of [
+    [fitnessY(history[selected].best_fitness), "#f0b943"],
+    [coverageY(history[selected].archive_coverage), "#77aee7"],
+  ]) {
+    context.beginPath();
+    context.arc(selectedX, value, 3.5, 0, Math.PI * 2);
+    context.fillStyle = color;
+    context.fill();
+  }
+}
+
+function renderLineage(history) {
+  const { context, width, height } = prepareCanvas(ui.lineageChart);
+  context.clearRect(0, 0, width, height);
+  if (!history.length) {
+    return;
+  }
+
+  const left = 10;
+  const right = width - 12;
+  const centerY = height * 0.52;
+  const step = history.length === 1 ? 0 : (right - left) / (history.length - 1);
+  context.lineWidth = 1;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+
+  for (let index = 0; index < history.length - 1; index += 1) {
+    const point = history[index];
+    const next = history[index + 1];
+    const x1 = left + index * step;
+    const x2 = left + (index + 1) * step;
+    const branchHeight = 14 + Math.min(30, point.archive_coverage * 120);
+    const branchCount = Math.min(3, Math.max(1, Math.round(point.occupied_cells / 3)));
+
+    context.strokeStyle = index < history.length * 0.56 ? "rgba(119, 174, 231, .68)" : "rgba(163, 232, 127, .72)";
+    context.beginPath();
+    context.moveTo(x1, centerY);
+    context.lineTo(x2, centerY);
+    context.stroke();
+
+    for (let branch = 0; branch < branchCount; branch += 1) {
+      const direction = branch % 2 === 0 ? -1 : 1;
+      const offset = branchHeight * (0.72 + branch * 0.22) * direction;
+      context.beginPath();
+      context.moveTo(x1 + step * 0.22, centerY);
+      context.lineTo(x1 + step * 0.58, centerY + offset);
+      context.lineTo(x2, centerY + offset);
+      context.stroke();
+      context.beginPath();
+      context.arc(x2, centerY + offset, 2.2, 0, Math.PI * 2);
+      context.fillStyle = context.strokeStyle;
+      context.fill();
+    }
+
+    if (next.best_fitness < point.best_fitness) {
+      context.strokeStyle = "rgba(240, 185, 67, .82)";
+    }
+  }
+
+  context.beginPath();
+  context.arc(right, centerY, 5.5, 0, Math.PI * 2);
+  context.fillStyle = "#a3e87f";
+  context.fill();
+  context.strokeStyle = "rgba(163, 232, 127, .34)";
+  context.lineWidth = 4;
+  context.stroke();
+}
+
+function prepareCanvas(chart) {
   const context = chart.getContext("2d");
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  const width = chart.clientWidth || 310;
-  const height = chart.clientHeight || 90;
-  chart.width = Math.max(1, Math.floor(width * ratio));
-  chart.height = Math.max(1, Math.floor(height * ratio));
+  const width = Math.max(1, chart.clientWidth || Number(chart.getAttribute("width")) || 320);
+  const height = Math.max(1, chart.clientHeight || Number(chart.getAttribute("height")) || 120);
+  chart.width = Math.floor(width * ratio);
+  chart.height = Math.floor(height * ratio);
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  return { context, width, height };
+}
+
+function renderEvolutionProgress(history) {
+  const { context, width, height } = prepareCanvas(ui.evolutionChart);
   context.clearRect(0, 0, width, height);
 
   if (!history.length) {
