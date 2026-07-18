@@ -19,3 +19,8 @@
 
 # Local experiment artifacts
 checkpoints/
+
+# Local release bundles and intermediate visual QA captures
+/release/
+/axiom-current-view.png
+/*-pass1.png

@@ -49,6 +49,8 @@ struct ReplayRequest {
     generations: usize,
     population_size: usize,
     evaluation_steps: usize,
+    archive_cell_x: Option<usize>,
+    archive_cell_y: Option<usize>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -94,9 +96,29 @@ struct ReplayResponse {
     stability: f32,
     terminal_tilt: f32,
     evolution_history: Vec<ReplayGenerationResponse>,
+    archive: Option<ReplayArchiveResponse>,
     dt: f32,
     body: Vec<ReplayBodyNode>,
     frames: Vec<ReplayFrameResponse>,
+}
+
+#[derive(Serialize)]
+struct ReplayArchiveResponse {
+    x_axis: &'static str,
+    y_axis: &'static str,
+    width: usize,
+    height: usize,
+    selected_cell: [usize; 2],
+    cells: Vec<ReplayArchiveCellResponse>,
+}
+
+#[derive(Serialize)]
+struct ReplayArchiveCellResponse {
+    cell: [usize; 2],
+    fitness: f32,
+    stable_distance: f32,
+    body_count: f32,
+    actuator_count: f32,
 }
 
 #[derive(Serialize)]
@@ -137,7 +159,15 @@ impl Default for ReplayRequest {
             generations: 12,
             population_size: 28,
             evaluation_steps: 180,
+            archive_cell_x: None,
+            archive_cell_y: None,
         }
+    }
+}
+
+impl ReplayRequest {
+    fn archive_cell(self) -> Option<(usize, usize)> {
+        self.archive_cell_x.zip(self.archive_cell_y)
     }
 }
 
@@ -320,6 +350,12 @@ fn parse_replay_request(query: &str) -> ReplayRequest {
                     request.evaluation_steps = evaluation_steps.clamp(20, 500);
                 }
             }
+            "cell_x" | "archive_x" => {
+                request.archive_cell_x = value.parse().ok();
+            }
+            "cell_y" | "archive_y" => {
+                request.archive_cell_y = value.parse().ok();
+            }
             _ => {}
         }
     }
@@ -378,35 +414,45 @@ fn replay_error_json(error: ReplayRequestError) -> String {
 }
 
 fn replay_json(request: ReplayRequest) -> String {
-    let (genome, evaluation, generations, population_size, evolution_history) = match request.mode {
-        ReplayMode::Minimal => {
-            let mut rng = Rng::new(request.seed);
-            let genome = Genome::minimal(request.controller, &mut rng);
-            let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
-            (genome, evaluation, 0, 1, Vec::new())
-        }
-        ReplayMode::Evolved => {
-            let report = run_evolution(EvolutionConfig {
-                seed: request.seed,
-                population_size: request.population_size,
-                generations: request.generations,
-                evaluation_steps: request.evaluation_steps,
-                task: request.task,
-                controller: Some(request.controller),
-                search_mode: SearchMode::MapElites,
-                ..EvolutionConfig::default()
-            })
-            .expect("validated replay evolution config should be valid");
-            let history = report.history;
-            (
-                report.best_genome,
-                report.best_evaluation,
-                request.generations,
-                request.population_size,
-                history,
-            )
-        }
-    };
+    let (genome, evaluation, generations, population_size, evolution_history, archive) =
+        match request.mode {
+            ReplayMode::Minimal => {
+                let mut rng = Rng::new(request.seed);
+                let genome = Genome::minimal(request.controller, &mut rng);
+                let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
+                (genome, evaluation, 0, 1, Vec::new(), None)
+            }
+            ReplayMode::Evolved => {
+                let report = run_evolution(EvolutionConfig {
+                    seed: request.seed,
+                    population_size: request.population_size,
+                    generations: request.generations,
+                    evaluation_steps: request.evaluation_steps,
+                    task: request.task,
+                    controller: Some(request.controller),
+                    search_mode: SearchMode::MapElites,
+                    ..EvolutionConfig::default()
+                })
+                .expect("validated replay evolution config should be valid");
+                let selected = request
+                    .archive_cell()
+                    .and_then(|cell| report.archive.elite_at(cell))
+                    .or_else(|| report.archive.best())
+                    .expect("a non-empty evolution run should populate the archive");
+                let genome = selected.genome.clone();
+                let evaluation = selected.evaluation.clone();
+                let archive = Some(replay_archive_response(&report.archive, selected.cell));
+                let history = report.history;
+                (
+                    genome,
+                    evaluation,
+                    request.generations,
+                    request.population_size,
+                    history,
+                    archive,
+                )
+            }
+        };
     let frames = capture_replay(&genome, request.task, request.frames, request.dt);
     let response = ReplayResponse {
         controller: genome.controller.as_str(),
@@ -432,6 +478,7 @@ fn replay_json(request: ReplayRequest) -> String {
                 occupied_cells: generation.occupied_cells,
             })
             .collect(),
+        archive,
         dt: request.dt,
         body: genome
             .body
@@ -465,6 +512,41 @@ fn replay_json(request: ReplayRequest) -> String {
     };
 
     serde_json::to_string(&response).expect("serializing replay response cannot fail")
+}
+
+fn replay_archive_response(
+    archive: &crate::qd::Archive,
+    selected_cell: (usize, usize),
+) -> ReplayArchiveResponse {
+    ReplayArchiveResponse {
+        x_axis: axis_name(archive.x_axis),
+        y_axis: axis_name(archive.y_axis),
+        width: archive.width,
+        height: archive.height,
+        selected_cell: [selected_cell.0, selected_cell.1],
+        cells: archive
+            .elites()
+            .map(|elite| ReplayArchiveCellResponse {
+                cell: [elite.cell.0, elite.cell.1],
+                fitness: elite.evaluation.fitness,
+                stable_distance: elite.evaluation.metrics.stable_distance,
+                body_count: elite.evaluation.metrics.body_count,
+                actuator_count: elite.evaluation.metrics.actuator_count,
+            })
+            .collect(),
+    }
+}
+
+fn axis_name(axis: crate::qd::Axis) -> &'static str {
+    match axis {
+        crate::qd::Axis::Distance => "distance",
+        crate::qd::Axis::StableDistance => "stable distance",
+        crate::qd::Axis::JumpHeight => "jump height",
+        crate::qd::Axis::Uprightness => "uprightness",
+        crate::qd::Axis::Stability => "stability",
+        crate::qd::Axis::BodyCount => "body count",
+        crate::qd::Axis::ActuatorCount => "actuator count",
+    }
 }
 
 fn parse_replay_mode(value: &str) -> Option<ReplayMode> {
@@ -580,6 +662,50 @@ mod tests {
         assert_eq!(value["controller"], "recurrent");
         assert_eq!(value["evolution_history"].as_array().map(Vec::len), Some(1));
         assert!(value["evolution_history"][0]["best_fitness"].is_number());
+        assert_eq!(value["archive"]["width"], 12);
+        assert_eq!(value["archive"]["height"], 8);
+        assert!(
+            value["archive"]["cells"]
+                .as_array()
+                .is_some_and(|cells| !cells.is_empty())
+        );
+        assert!(value["archive"]["selected_cell"].is_array());
+    }
+
+    #[test]
+    fn evolved_replay_can_select_an_occupied_archive_cell() {
+        let initial = replay_json(ReplayRequest {
+            mode: ReplayMode::Evolved,
+            population_size: 4,
+            generations: 1,
+            evaluation_steps: 20,
+            frames: 1,
+            ..ReplayRequest::default()
+        });
+        let initial: serde_json::Value = serde_json::from_str(&initial).unwrap();
+        let cell = initial["archive"]["cells"][0]["cell"]
+            .as_array()
+            .expect("archive cell should have coordinates");
+        let selected = replay_json(ReplayRequest {
+            mode: ReplayMode::Evolved,
+            population_size: 4,
+            generations: 1,
+            evaluation_steps: 20,
+            frames: 1,
+            archive_cell_x: cell[0].as_u64().map(|value| value as usize),
+            archive_cell_y: cell[1].as_u64().map(|value| value as usize),
+            ..ReplayRequest::default()
+        });
+        let selected: serde_json::Value = serde_json::from_str(&selected).unwrap();
+
+        assert_eq!(
+            selected["archive"]["selected_cell"],
+            initial["archive"]["cells"][0]["cell"]
+        );
+        assert_eq!(
+            selected["fitness"],
+            initial["archive"]["cells"][0]["fitness"]
+        );
     }
 
     #[test]

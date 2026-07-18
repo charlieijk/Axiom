@@ -99,6 +99,14 @@ impl Archive {
         self.cells.iter().filter_map(Option::as_ref)
     }
 
+    pub fn elite_at(&self, cell: (usize, usize)) -> Option<&Elite> {
+        if cell.0 >= self.width || cell.1 >= self.height {
+            return None;
+        }
+
+        self.cells[self.index(cell)].as_ref()
+    }
+
     pub fn best(&self) -> Option<&Elite> {
         self.elites().max_by(|a, b| {
             a.evaluation
@@ -200,5 +208,30 @@ mod tests {
             },
         ));
         assert_eq!(archive.occupied_count(), 1);
+    }
+
+    #[test]
+    fn archive_exposes_elites_by_cell() {
+        let mut rng = Rng::new(4);
+        let genome = Genome::minimal(ControllerKind::FeedForward, &mut rng);
+        let metrics = Metrics {
+            distance: 2.0,
+            body_count: 5.0,
+            ..Metrics::default()
+        };
+        let mut archive = Archive::new(Axis::Distance, Axis::BodyCount, 4, 4);
+        let cell = archive.cell_for(&metrics);
+
+        archive.insert(
+            genome,
+            Evaluation {
+                fitness: 3.0,
+                metrics,
+                steps: 10,
+            },
+        );
+
+        assert_eq!(archive.elite_at(cell).unwrap().evaluation.fitness, 3.0);
+        assert!(archive.elite_at((archive.width, 0)).is_none());
     }
 }

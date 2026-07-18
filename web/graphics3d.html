@@ -139,17 +139,17 @@
           </div>
         </section>
 
-        <section class="lineage-section">
-          <div class="lineage-heading">
-            <span class="eyebrow">Search lineage</span>
-            <span id="lineage-caption">12 generations</span>
+        <section class="archive-section">
+          <div class="archive-heading">
+            <span class="eyebrow">Archive lab</span>
+            <span id="archive-caption">Waiting for occupied cells</span>
           </div>
-          <canvas id="lineage-chart" width="720" height="290" aria-label="Search lineage across generations"></canvas>
-          <div class="lineage-legend">
-            <span>Older</span>
-            <i></i>
-            <span>Newer</span>
+          <div id="archive-grid" class="archive-grid" role="grid" aria-label="MAP-Elites archive; select an occupied cell to replay its creature"></div>
+          <div class="archive-axes" aria-hidden="true">
+            <span id="archive-y-axis">Body count ↑</span>
+            <span id="archive-x-axis">Stable distance →</span>
           </div>
+          <p id="archive-detail" class="archive-detail" aria-live="polite">Run evolution to inspect archive elites.</p>
         </section>
 
         <p id="field-note" class="field-note">Evolving a compact population before replay.</p>

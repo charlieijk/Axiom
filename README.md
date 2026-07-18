@@ -2,6 +2,8 @@
 
 Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neural controllers across terrain tasks, then keeps diverse elites in a MAP-Elites archive instead of collapsing everything to one winner.
 
+Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
+
 This rebuild is scoped from the previous Axiom review thread:
 
 - morphology genomes with directional attachments
@@ -37,7 +39,7 @@ cargo run --example rough_terrain_benchmark
 
 ## Current Scope
 
-The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. The next natural layer is archive grid browsing, lineage history, and persistent checkpoints in the UI.
+The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. The next natural layer is individual lineage history and persistent checkpoints in the UI.
 
 The `animate` command provides a terminal replay renderer over the same simulation loop:
 
