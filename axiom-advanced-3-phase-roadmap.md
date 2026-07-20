@@ -23,12 +23,12 @@ Completed in this rebuild foundation:
 - Archive replacement by fitness per cell.
 - Archive-driven parent sampling.
 - Distance/body-count default descriptor grid.
+- browser Archive Lab with live occupancy and fitness intensity
+- direct replay selection for every occupied cell
 
 Next expansion:
 
-- browser Archive Lab
-- direct cell filters
-- replay any occupied cell
+- alternate descriptor-axis filters
 - lineage and mutation history per elite
 - checkpoint persistence for archive state
 

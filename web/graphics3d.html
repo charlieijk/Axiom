@@ -3,19 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Axiom 3D Graphics Example</title>
-    <link rel="stylesheet" href="/graphics3d.css?v=2" />
+    <meta name="theme-color" content="#06100d" />
+    <title>Axiom — Evolution Field Journal</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5.1.1/index.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/newsreader@5.1.1/index.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <link rel="stylesheet" href="/graphics3d.css?v=3" />
   </head>
   <body>
-    <main class="graphics-shell">
-      <canvas id="graphics-canvas" aria-label="3D creature replay scene"></canvas>
+    <main class="field-journal-shell">
+      <section class="simulation-stage" aria-label="Live evolved creature replay">
+        <canvas id="graphics-canvas" aria-label="3D creature replay scene"></canvas>
 
-      <section class="hud-layer" aria-label="3D replay HUD">
-        <div class="objective-chip">
-          <span>Objective</span>
-          <strong>Test the evolved stride</strong>
-          <small id="run-label">Evolving / rough / seed 29</small>
-          <div class="evolution-controls" aria-label="Evolved replay controls">
+        <header class="stage-header">
+          <div class="axiom-brand" aria-label="Axiom">
+            <strong>AXIOM</strong>
+            <span>Embodied evolution</span>
+          </div>
+
+          <div class="objective-block">
+            <span class="eyebrow">Objective</span>
+            <strong>Test the evolved stride</strong>
+            <small id="run-label">CPG // Rough terrain // gen 12 // seed 29</small>
+          </div>
+
+          <div class="evolution-controls" aria-label="Evolution controls">
             <label>
               <span>Controller</span>
               <select id="controller">
@@ -33,41 +47,141 @@
               </select>
             </label>
           </div>
+        </header>
+
+        <section class="progress-panel" aria-label="Evolution progress">
+          <div class="progress-heading">
+            <span class="eyebrow">Evolution progress</span>
+            <strong id="evolution-summary">Waiting for search</strong>
+          </div>
+          <canvas id="evolution-chart" width="760" height="150" aria-label="Fitness and archive coverage by generation"></canvas>
+          <div class="evolution-legend" aria-hidden="true">
+            <span><i class="fitness-line"></i>Best fitness</span>
+            <span><i class="mean-line"></i>Mean fitness</span>
+            <span><i class="coverage-line"></i>Archive coverage</span>
+          </div>
+        </section>
+
+        <div class="specimen-label specimen-current">
+          <strong id="current-generation-label">GEN 12 (CURRENT)</strong>
+          <span>Champion</span>
+        </div>
+        <div class="specimen-label specimen-previous">
+          <strong id="previous-generation-label">GEN 11 (PREVIOUS)</strong>
+          <span>Motion trace</span>
         </div>
 
-        <div class="status-strip" aria-label="Replay status">
-          <div>
-            <span>Time</span>
-            <strong id="metric-time">0.00s</strong>
+        <div class="live-metrics" aria-label="Replay status">
+          <span><i class="ph ph-timer" aria-hidden="true"></i><strong id="metric-time">0.00s</strong></span>
+          <span><i class="ph ph-path" aria-hidden="true"></i><strong id="metric-distance">0.00</strong></span>
+          <span><i class="ph ph-angle" aria-hidden="true"></i><strong id="metric-tilt">0.00</strong></span>
+        </div>
+
+        <div class="stage-actions" aria-label="Scene actions">
+          <button id="play-toggle" type="button"><i class="ph ph-pause" aria-hidden="true"></i><span>Pause</span></button>
+          <button id="camera-mode" type="button"><i class="ph ph-video-camera" aria-hidden="true"></i><span>Follow</span></button>
+          <button id="fx-toggle" type="button"><i class="ph ph-sparkle" aria-hidden="true"></i><span>Full FX</span></button>
+          <a href="/" aria-label="Open the 2D replay"><i class="ph ph-cube" aria-hidden="true"></i><span>2D replay</span></a>
+        </div>
+
+        <div id="control-hint" class="control-hint">
+          <i class="ph ph-cursor-click" aria-hidden="true"></i>
+          <span>Drag to orbit</span>
+          <i class="ph ph-mouse" aria-hidden="true"></i>
+          <span>Scroll to zoom</span>
+        </div>
+
+        <div id="loading-state" class="loading-state" role="status" aria-live="polite">
+          <span class="loading-orbit" aria-hidden="true"></span>
+          <strong id="loading-title">Evolving generation 12</strong>
+          <span id="loading-detail">Searching 28 candidate bodies</span>
+        </div>
+      </section>
+
+      <aside class="journal-panel" aria-label="Evolution field journal">
+        <header class="journal-heading">
+          <i class="ph ph-planet" aria-hidden="true"></i>
+          <span>Evolution Field Journal</span>
+        </header>
+
+        <section class="generation-intro">
+          <span class="eyebrow">Current observation</span>
+          <h1 id="generation-title">Generation 12</h1>
+          <p id="generation-terrain">Rough terrain</p>
+        </section>
+
+        <section class="change-notes">
+          <span class="eyebrow">What changed</span>
+          <p id="change-narrative">Natural selection is testing stability and propulsion across irregular ground.</p>
+
+          <div class="change-list">
+            <article class="change-item change-positive">
+              <i class="ph ph-trend-up" aria-hidden="true"></i>
+              <div>
+                <strong id="delta-stride">Fitness gain pending</strong>
+                <p id="delta-stride-note">Comparing the latest champion with the previous generation.</p>
+              </div>
+            </article>
+            <article class="change-item change-geometry">
+              <i class="ph ph-arrows-out-line-vertical" aria-hidden="true"></i>
+              <div>
+                <strong id="delta-geometry">Limb geometry evolving</strong>
+                <p id="delta-geometry-note">Reading body-plan changes from the champion genome.</p>
+              </div>
+            </article>
+            <article class="change-item change-control">
+              <i class="ph ph-wave-sine" aria-hidden="true"></i>
+              <div>
+                <strong id="delta-control">CPG phase stabilized</strong>
+                <p id="delta-control-note">Alternating joint timing is evaluated in the same physics loop.</p>
+              </div>
+            </article>
           </div>
-          <div>
-            <span>Distance</span>
-            <strong id="metric-distance">0.00</strong>
+        </section>
+
+        <section class="archive-section">
+          <div class="archive-heading">
+            <span class="eyebrow">Archive lab</span>
+            <span id="archive-caption">Waiting for occupied cells</span>
           </div>
-          <div>
-            <span>Tilt</span>
-            <strong id="metric-tilt">0.00</strong>
+          <div id="archive-grid" class="archive-grid" role="grid" aria-label="MAP-Elites archive; select an occupied cell to replay its creature"></div>
+          <div class="archive-axes" aria-hidden="true">
+            <span id="archive-y-axis">Body count ↑</span>
+            <span id="archive-x-axis">Stable distance →</span>
+          </div>
+          <p id="archive-detail" class="archive-detail" aria-live="polite">Run evolution to inspect archive elites.</p>
+        </section>
+
+        <p id="field-note" class="field-note">Evolving a compact population before replay.</p>
+        <p id="controller-note" class="sr-only">CPG adds an alternating gait wave to neural joint commands.</p>
+      </aside>
+
+      <section class="generation-timeline" aria-label="Generation timeline">
+        <div class="timeline-data">
+          <div class="timeline-heading">
+            <span class="eyebrow">Generation timeline</span>
+            <div id="generation-rail" class="generation-rail" aria-label="Select a generation"></div>
+          </div>
+          <canvas id="timeline-chart" width="1700" height="150" aria-label="Fitness and coverage timeline"></canvas>
+          <div class="timeline-labels" aria-hidden="true">
+            <span class="fitness-label">Fitness <small>best</small></span>
+            <span class="coverage-label">Coverage <small>archive</small></span>
           </div>
         </div>
 
-        <details class="field-log">
-          <summary>Field Log</summary>
-          <p id="field-note">Evolving a compact population before replay.</p>
-          <p id="controller-note" class="controller-note">CPG adds an alternating gait wave to neural joint commands.</p>
-        </details>
-
-        <div class="scene-actions" aria-label="Scene actions">
-          <button id="play-toggle" type="button">Pause</button>
-          <button id="reroll" type="button">Evolve</button>
-          <button id="camera-mode" type="button">Follow</button>
-          <button id="fx-toggle" type="button">Full FX</button>
-          <a href="/" aria-label="Return to 2D replay">2D</a>
+        <div class="selected-generation" aria-live="polite">
+          <span id="selected-generation">GEN 12</span>
+          <strong id="selected-fitness">Fitness 121.46</strong>
+          <strong id="selected-coverage">Coverage 15%</strong>
         </div>
 
-        <div id="control-hint" class="control-hint">Drag to orbit</div>
+        <button id="reroll" class="evolve-button" type="button" aria-label="Evolve next generation">
+          <span>Evolve next generation</span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </button>
       </section>
     </main>
 
-    <script type="module" src="/graphics3d.js?v=2"></script>
+    <script type="module" src="/graphics3d.js?v=3"></script>
   </body>
 </html>
