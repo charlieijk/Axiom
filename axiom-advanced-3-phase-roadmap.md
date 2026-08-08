@@ -8,11 +8,11 @@ Completed in this rebuild foundation:
 - Persistent `BrainState` for stateful rollout.
 - Shared observation vector used by evaluator-facing code.
 - Regression coverage around network input/bias ordering.
+- Versioned controller and genome serialization inside experiment checkpoints.
 
 Next expansion:
 
 - richer recurrent topologies
-- controller checkpoint serialization
 - CPG parameter mutation separate from network weights
 
 ## Phase 2: Quality-Diversity Search
@@ -25,12 +25,12 @@ Completed in this rebuild foundation:
 - Distance/body-count default descriptor grid.
 - browser Archive Lab with live occupancy and fitness intensity
 - direct replay selection for every occupied cell
+- durable archive checkpoints with genome identity and parent lineage
+- truthful lineage and mutation details for the selected browser elite
 
 Next expansion:
 
 - alternate descriptor-axis filters
-- lineage and mutation history per elite
-- checkpoint persistence for archive state
 
 ## Phase 3: Multi-Task Curriculum
 

@@ -1,6 +1,8 @@
 use std::ops::{Add, AddAssign, Mul, Sub};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -66,7 +68,7 @@ impl Mul<f32> for Vec2 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Attachment {
     Right,
     Left,

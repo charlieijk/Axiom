@@ -1,15 +1,16 @@
 use crate::genome::{BodyGenome, Genome, sensor_count};
 use crate::policy::Brain;
 use crate::simulation::{Simulation, Snapshot, World};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TaskKind {
     FlatRun,
     RoughTerrain,
     Recovery,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Metrics {
     pub distance: f32,
     pub stable_distance: f32,
@@ -22,7 +23,7 @@ pub struct Metrics {
     pub energy: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Evaluation {
     pub fitness: f32,
     pub metrics: Metrics,

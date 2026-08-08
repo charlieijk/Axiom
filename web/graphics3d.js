@@ -236,7 +236,6 @@ function start(THREE) {
     }
     renderEvolutionProgress(state.replay.evolution_history || []);
     renderGenerationTimeline(state.replay.evolution_history || [], { preserveButtons: true });
-    renderLineage(state.replay.evolution_history || []);
   });
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
@@ -1009,18 +1008,24 @@ function renderFieldJournal(replay) {
     : 0;
   const terrain = labelFor(replay.task);
   const controller = labelFor(replay.controller);
+  const selectedLineage = replay.lineage?.at(-1);
+  const lineageDepth = replay.lineage?.length || 0;
 
   ui.generationTitle.textContent = `Generation ${replay.generations}`;
   ui.generationTerrain.textContent = terrain === "Rough" ? "Rough terrain" : terrain;
   ui.currentGenerationLabel.textContent = `GEN ${replay.generations} (CURRENT)`;
   ui.previousGenerationLabel.textContent = `GEN ${Math.max(1, replay.generations - 1)} (PREVIOUS)`;
-  ui.changeNarrative.textContent = `Selection favored forward travel without surrendering stability on ${terrain.toLowerCase()} terrain. The current champion balances ${replay.body.length} body segments through a ${controller} controller, converting a stable distance of ${formatMetric(replay.stable_distance, 2)} into repeatable progress.`;
+  ui.changeNarrative.textContent = selectedLineage
+    ? `Genome #${selectedLineage.genome_id} descends through ${lineageDepth} recorded ${lineageDepth === 1 ? "generation" : "generations"}. Its latest inherited change ${selectedLineage.mutation_summary}, while preserving ${formatMetric(replay.stability, 2)} stability on ${terrain.toLowerCase()} terrain.`
+    : `Selection favored forward travel without surrendering stability on ${terrain.toLowerCase()} terrain. The current champion balances ${replay.body.length} body segments through a ${controller} controller, converting a stable distance of ${formatMetric(replay.stable_distance, 2)} into repeatable progress.`;
   ui.deltaStride.textContent = `${fitnessGain >= 0 ? "+" : ""}${formatMetric(fitnessGain, 2)} total fitness gain`;
   ui.deltaStrideNote.textContent = first
     ? `Improved from ${formatMetric(first.best_fitness, 2)} to ${formatMetric(last.best_fitness, 2)} across the active search.`
     : "Establishing the first comparable champion.";
   ui.deltaGeometry.textContent = `${replay.body.length}-part morphology selected`;
-  ui.deltaGeometryNote.textContent = `Mean body scale ${formatMetric(averageScale, 2)} with ${Math.max(0, replay.body.length - 1)} articulated joints.`;
+  ui.deltaGeometryNote.textContent = selectedLineage
+    ? `Recorded mutation: ${selectedLineage.mutation_summary}. Mean body scale ${formatMetric(averageScale, 2)}.`
+    : `Mean body scale ${formatMetric(averageScale, 2)} with ${Math.max(0, replay.body.length - 1)} articulated joints.`;
   ui.deltaControl.textContent = `${controller} stability ${formatMetric(replay.stability, 2)}`;
   ui.deltaControlNote.textContent = controllerBehaviorNote(replay.controller);
 }
@@ -1062,7 +1067,7 @@ function renderArchiveLab(replay, fetchReplay) {
       button.style.setProperty("--cell-intensity", intensity.toFixed(3));
       button.dataset.cell = key;
       button.setAttribute("role", "gridcell");
-      button.setAttribute("aria-label", `Replay archive cell ${x}, ${y}; fitness ${formatMetric(elite.fitness, 2)}; stable distance ${formatMetric(elite.stable_distance, 2)}; ${Math.round(elite.body_count)} body parts`);
+      button.setAttribute("aria-label", `Replay genome ${elite.genome_id} from archive cell ${x}, ${y}; born generation ${elite.generation}; fitness ${formatMetric(elite.fitness, 2)}; stable distance ${formatMetric(elite.stable_distance, 2)}; ${Math.round(elite.body_count)} body parts`);
       button.setAttribute("aria-pressed", String(key === selectedKey));
       button.classList.toggle("is-selected", key === selectedKey);
       button.addEventListener("click", () => {
@@ -1086,7 +1091,7 @@ function renderArchiveLab(replay, fetchReplay) {
   ui.archiveYAxis.textContent = `${labelFor(archive.y_axis)} ↑`;
   const selected = byCell.get(selectedKey);
   ui.archiveDetail.textContent = selected
-    ? `Cell ${selected.cell[0]},${selected.cell[1]} · fitness ${formatMetric(selected.fitness, 2)} · stable ${formatMetric(selected.stable_distance, 2)} · ${Math.round(selected.body_count)} body parts`
+    ? `Genome #${selected.genome_id} · born gen ${selected.generation} · cell ${selected.cell[0]},${selected.cell[1]} · fitness ${formatMetric(selected.fitness, 2)} · ${selected.mutation_summary}`
     : "Select an occupied cell to replay its elite.";
 }
 

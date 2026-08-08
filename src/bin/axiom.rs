@@ -1,6 +1,7 @@
 use axiom::{
-    EvolutionConfig, Genome, SearchMode, TaskKind,
+    EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind,
     animation::{TerminalAnimationConfig, play_terminal_animation},
+    checkpoint::{load_checkpoint, save_checkpoint},
     evolution::run_evolution,
     fitness::evaluate,
     policy::ControllerKind,
@@ -15,6 +16,7 @@ fn main() {
         Some("evaluate") => evaluate_once(args.next().as_deref()),
         Some("evolve") => evolve(args.collect()),
         Some("animate") | Some("replay") => animate(args.collect()),
+        Some("inspect") | Some("checkpoint") => inspect_checkpoint(args.collect()),
         Some("gui") | Some("serve") => gui(args.collect()),
         Some("help") | Some("--help") | Some("-h") | None => print_help(),
         Some(command) => {
@@ -70,6 +72,7 @@ fn evaluate_once(controller: Option<&str>) {
 
 fn evolve(args: Vec<String>) {
     let mut config = EvolutionConfig::default();
+    let mut save_path = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -88,6 +91,9 @@ fn evolve(args: Vec<String>) {
             "--seed" => {
                 config.seed = parse_next(&args, &mut index, "seed");
             }
+            "--save" | "--checkpoint" => {
+                save_path = Some(parse_next::<String>(&args, &mut index, "checkpoint path"));
+            }
             other => {
                 eprintln!("unknown evolve option: {other}");
                 std::process::exit(2);
@@ -96,7 +102,7 @@ fn evolve(args: Vec<String>) {
         index += 1;
     }
 
-    let report = run_evolution(config).unwrap_or_else(|error| {
+    let report = run_evolution(config.clone()).unwrap_or_else(|error| {
         eprintln!("evolution failed: {error}");
         std::process::exit(2);
     });
@@ -123,12 +129,24 @@ fn evolve(args: Vec<String>) {
         report.archive.occupied_count(),
         report.archive.coverage() * 100.0
     );
+    println!("lineage records: {}", report.lineage.len());
+
+    if let Some(path) = save_path {
+        let checkpoint = EvolutionCheckpoint::from_report(config, report);
+        save_checkpoint(&path, &checkpoint).unwrap_or_else(|error| {
+            eprintln!("failed to save checkpoint {path}: {error}");
+            std::process::exit(1);
+        });
+        println!("saved checkpoint: {path}");
+    }
 }
 
 fn animate(args: Vec<String>) {
     let mut config = TerminalAnimationConfig::default();
-    let mut controller = ControllerKind::Cpg;
+    let mut controller = None;
     let mut task = TaskKind::RoughTerrain;
+    let mut task_explicit = false;
+    let mut checkpoint_path = None;
     let mut seed = 19_u64;
     let mut index = 0;
 
@@ -158,13 +176,17 @@ fn animate(args: Vec<String>) {
                         std::process::exit(2);
                     }
                 };
+                task_explicit = true;
+            }
+            "--checkpoint" => {
+                checkpoint_path = Some(parse_next::<String>(&args, &mut index, "checkpoint path"));
             }
             "--no-clear" => {
                 config.clear_screen = false;
             }
             value => {
                 controller = match parse_controller(value) {
-                    Some(controller) => controller,
+                    Some(controller) => Some(controller),
                     None => {
                         eprintln!("unknown animate option or controller: {value}");
                         std::process::exit(2);
@@ -175,12 +197,54 @@ fn animate(args: Vec<String>) {
         index += 1;
     }
 
-    let mut rng = Rng::new(seed);
-    let genome = Genome::minimal(controller, &mut rng);
+    let genome = if let Some(path) = checkpoint_path {
+        let checkpoint = load_checkpoint(&path).unwrap_or_else(|error| {
+            eprintln!("failed to load checkpoint {path}: {error}");
+            std::process::exit(1);
+        });
+        if !task_explicit {
+            task = checkpoint.config.task;
+        }
+        checkpoint.report.best_genome
+    } else {
+        let mut rng = Rng::new(seed);
+        Genome::minimal(controller.unwrap_or(ControllerKind::Cpg), &mut rng)
+    };
     if let Err(error) = play_terminal_animation(&genome, task, config) {
         eprintln!("animation failed: {error}");
         std::process::exit(1);
     }
+}
+
+fn inspect_checkpoint(args: Vec<String>) {
+    let Some(path) = args.first() else {
+        eprintln!("missing checkpoint path");
+        std::process::exit(2);
+    };
+    if args.len() > 1 {
+        eprintln!("inspect accepts exactly one checkpoint path");
+        std::process::exit(2);
+    }
+
+    let checkpoint = load_checkpoint(path).unwrap_or_else(|error| {
+        eprintln!("failed to load checkpoint {path}: {error}");
+        std::process::exit(1);
+    });
+    println!("checkpoint version: {}", checkpoint.version);
+    println!("seed:               {}", checkpoint.config.seed);
+    println!("generations:        {}", checkpoint.report.generations);
+    println!("evaluated genomes:  {}", checkpoint.report.evaluated_count);
+    println!("lineage records:    {}", checkpoint.report.lineage.len());
+    println!("best genome id:     {}", checkpoint.report.best_genome_id);
+    println!(
+        "best fitness:       {:.3}",
+        checkpoint.report.best_evaluation.fitness
+    );
+    println!(
+        "archive:            {} occupied cells ({:.1}% coverage)",
+        checkpoint.report.archive.occupied_count(),
+        checkpoint.report.archive.coverage() * 100.0
+    );
 }
 
 fn gui(args: Vec<String>) {
@@ -257,7 +321,9 @@ fn print_help() {
            axiom demo\n\
            axiom evaluate [feedforward|recurrent|cpg]\n\
            axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
+           axiom animate --checkpoint PATH [--task flat|rough|recovery] [--frames N] [--fps N]\n\
+           axiom inspect PATH\n\
            axiom gui [--host HOST] [--port PORT] [--check]\n\
-           axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n"
+           axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N] [--save PATH]\n"
     );
 }

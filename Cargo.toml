@@ -5,6 +5,22 @@ edition = "2024"
 rust-version = "1.85"
 description = "Embodied evolution sandbox with morphology, controllers, task fitness, and MAP-Elites search."
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/charlieijk/Axiom"
+homepage = "https://github.com/charlieijk/Axiom"
+keywords = ["evolution", "simulation", "map-elites", "neuroevolution"]
+categories = ["science", "simulation"]
+include = [
+    "/src/**",
+    "/web/**",
+    "/examples/**",
+    "/tests/**",
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/DEMO.md",
+    "/LICENSE",
+]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
