@@ -58,4 +58,18 @@ test("keeps the production site responsive and free of preview scaffolding", asy
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(css, /@media\s*\([^)]*max-width/i);
   assert.match(css, /prefers-reduced-motion/i);
+
+  const proofAsset = page.match(/src="\/(original-interface\.(png|jpe?g))"/i);
+  if (proofAsset) {
+    const bytes = await readFile(
+      new URL(`../public/${proofAsset[1]}`, import.meta.url),
+    );
+    assert.ok(bytes.length <= 2_500_000, `${proofAsset[1]} exceeds the 2.5 MB proof-image budget`);
+    if (proofAsset[2].toLowerCase() === "png") {
+      assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    } else {
+      assert.deepEqual([...bytes.subarray(0, 3)], [255, 216, 255]);
+    }
+    assert.match(page, /<img[^>]+alt="[^"]+"[^>]+loading="lazy"/i);
+  }
 });

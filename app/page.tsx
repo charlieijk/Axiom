@@ -47,14 +47,14 @@ export default function Home() {
           </div>
         </div>
       </section>
-<section className="connection" id="connection">
+      <section className="connection" id="connection">
         <div className="connection-grid">
           <div className="connection-copy">
             <p className="kicker">CONNECTED ORIGINAL PROJECT</p>
             <h2>This Site has a real source of truth.</h2>
             <p>The presentation above is paired with the canonical project boundary below. Open the real live environment when one exists, inspect the source snapshot, or use the documented local launch path for backend and native capabilities.</p>
             <div className="connection-links"><a href="https://github.com/charlieijk/Axiom" target="_blank" rel="noreferrer">Open source project ↗</a></div>
-            <figure className="original-proof"><img src="/original-interface.png" alt="Original axiom project interface or design proof" loading="lazy" /><figcaption>Original project interface / design proof</figcaption></figure>
+            <figure className="original-proof"><img src="/original-interface.jpg" alt="Original axiom project interface or design proof" loading="lazy" /><figcaption>Original project interface / design proof</figcaption></figure>
           </div>
           <dl className="connection-record">
             <div><dt>Canonical source</dt><dd>https://github.com/charlieijk/Axiom</dd></div>
