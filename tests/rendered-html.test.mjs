@@ -31,6 +31,7 @@ test("server-renders the dedicated product site", async () => {
   const html = await response.text();
   assert.match(html, /<title>[^<]+<\/title>/i);
   assert.match(html, /<meta(?=[^>]*\bname=["']description["'])(?=[^>]*\bcontent=["'][^"']+["'])[^>]*>/i);
+  assert.match(html, /<link(?=[^>]*\brel=["']icon["'])(?=[^>]*\bhref=["']\/icon\.svg\?[^"']+["'])[^>]*>/i);
   assert.match(html, /<main\b/i);
   assert.match(html, /<h1\b[^>]*>.+?<\/h1>/is);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Building your site|react-loading-skeleton/i);
@@ -45,11 +46,12 @@ test("server-renders the dedicated product site", async () => {
 });
 
 test("keeps the production site responsive and free of preview scaffolding", async () => {
-  const [page, layout, css, packageJson] = await Promise.all([
+  const [page, layout, css, packageJson, icon] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/icon.svg", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(page, /codex-preview|_sites-preview|SkeletonPreview/);
@@ -58,6 +60,8 @@ test("keeps the production site responsive and free of preview scaffolding", asy
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(css, /@media\s*\([^)]*max-width/i);
   assert.match(css, /prefers-reduced-motion/i);
+  assert.match(icon, /^<svg[^>]+viewBox="0 0 64 64"/);
+  assert.doesNotMatch(icon, /\b(?:href|src)=["']https?:\/\//i);
 
   const proofAsset = page.match(/src="\/(original-interface\.(png|jpe?g))"/i);
   if (proofAsset) {
