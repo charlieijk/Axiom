@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- Local proof screenshots are bundled static assets. */
+
 import { useState } from "react";
 
 const views = [
@@ -23,7 +25,7 @@ export default function Home() {
           <p className="kicker">EMBODIED EVOLUTION / MAP-ELITES</p>
           <h1>Evolution you can interrogate.</h1>
           <p className="summary">An embodied evolution laboratory where morphology, controllers, fitness, and diversity search become visible through creature replays and an inspectable archive.</p>
-          <div className="actions"><a href="#experience">Explore the product ↘</a><a href="#principles">Product principles</a></div>
+          <div className="actions"><a href="#experience">Explore the product ↘</a><a href="#connection">Connected project</a></div>
           <div className="metrics">
             <div className="metric"><strong>2D + 3D</strong><span>Replay surfaces</span></div>
             <div className="metric"><strong>MAP-ELITES</strong><span>Diversity archive</span></div>
@@ -45,6 +47,24 @@ export default function Home() {
           </div>
         </div>
       </section>
+<section className="connection" id="connection">
+        <div className="connection-grid">
+          <div className="connection-copy">
+            <p className="kicker">CONNECTED ORIGINAL PROJECT</p>
+            <h2>This Site has a real source of truth.</h2>
+            <p>The presentation above is paired with the canonical project boundary below. Open the real live environment when one exists, inspect the source snapshot, or use the documented local launch path for backend and native capabilities.</p>
+            <div className="connection-links"><a href="https://github.com/charlieijk/Axiom" target="_blank" rel="noreferrer">Open source project ↗</a></div>
+            <figure className="original-proof"><img src="/original-interface.png" alt="Original axiom project interface or design proof" loading="lazy" /><figcaption>Original project interface / design proof</figcaption></figure>
+          </div>
+          <dl className="connection-record">
+            <div><dt>Canonical source</dt><dd>https://github.com/charlieijk/Axiom</dd></div>
+            <div><dt>Connected snapshot</dt><dd>main · 2a375cc3</dd></div>
+            <div><dt>Original frontend</dt><dd>Rust simulation + 2D/3D browser viewer</dd></div>
+            <div><dt>Source boundary</dt><dd>web/index.html · web/graphics3d.html</dd></div>
+            <div><dt>Launch locally</dt><dd>cargo run -- serve</dd></div>
+          </dl>
+        </div>
+      </section>
       <section className="manifest" id="principles">
         <p className="kicker">PRODUCT SURFACE / CURRENT BOUNDARY</p>
         <h2>Three views. One coherent operating model.</h2>
@@ -59,4 +79,3 @@ export default function Home() {
     </main>
   );
 }
-
