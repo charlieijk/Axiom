@@ -7,7 +7,8 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Axiom — Charlie Cullen",
-  description: "An embodied evolution laboratory where morphology, controllers, fitness, and diversity search become visible through creature replays and an inspectable archive."
+  description: "An embodied evolution laboratory where morphology, controllers, fitness, and diversity search become visible through creature replays and an inspectable archive.",
+  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
