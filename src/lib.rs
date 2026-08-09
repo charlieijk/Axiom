@@ -19,4 +19,4 @@ pub use evolution::{
 pub use fitness::{Evaluation, TaskKind, evaluate};
 pub use genome::{BodyGenome, Genome};
 pub use policy::{Brain, BrainState, ControllerKind};
-pub use qd::{Archive, Axis};
+pub use qd::{Archive, Axis, AxisSpec, Grid};
