@@ -18,7 +18,7 @@ export default function Home() {
     <main className="site" style={{ "--accent": "#c9f24b", "--soft": "#e9f9a7" } as React.CSSProperties}>
       <header className="topbar">
         <div className="brand"><i>AX</i>Axiom</div>
-        <div className="status">Deterministic simulation</div>
+        <div className="status">Beta 1.0 · Deterministic simulation</div>
       </header>
       <section className="hero">
         <div className="hero-copy">
@@ -75,7 +75,7 @@ export default function Home() {
         </div>
       </section>
       <section className="boundary"><b>SITES EDITION</b><p>This dedicated website presents the current frontend safely. Native capabilities, local credentials, private connectors, and production mutations remain outside the browser boundary.</p></section>
-      <footer><span>Charlie Cullen / Developer workspace</span><b>Axiom</b><span>Private Sites edition</span></footer>
+      <footer><span>Charlie Cullen / Developer workspace</span><b>Axiom</b><span>Beta 1.0 · Sites edition</span></footer>
     </main>
   );
 }
