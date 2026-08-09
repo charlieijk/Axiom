@@ -99,6 +99,55 @@ It matters for transfer: the servo parameters most likely to be wrong on real
 hardware are precisely the ones this reference run cannot discriminate. A
 transfer study needs a faster or more heavily loaded gait to probe them.
 
+## Evolving a repertoire
+
+MAP-Elites over the simulator, keeping the best controller per behaviour cell
+rather than one winner. The grid mechanics come from `axiom::qd::Grid`, which
+carries no Axiom domain types; this crate supplies its own payload and axes.
+
+The controller is a CPG — one oscillator per joint, with amplitude, phase and
+bias — not a neural network. An open-loop gait has no observations worth
+mapping, and a feedforward net fed only a phase signal *is* a CPG with worse
+locality under mutation. The reference trot is a point in this space, so the
+search starts from a gait known to walk.
+
+**Every genome is scored across an ensemble of perturbed worlds**, not one
+nominal world: mass +/-15%, friction +/-30%, servo speed and torque +/-20%, and
+a per-joint mounting error of +/-3 degrees (about one tooth on a 25-tooth
+spline). Selection is on the ensemble *mean*, because a controller that only
+works in one lucky world is exactly what randomization exists to reject.
+
+Measured run, seed 1, 24 generations x 24 genomes x 4 worlds (576 genomes,
+2,304 simulated runs, ~100 s in release):
+
+| | |
+| --- | --- |
+| Archive coverage | **44.8%** (43 of 96 cells) |
+| Best controller | 0.1175 m/s, fell in 0 of 4 worlds |
+| Reference trot, same worlds | 0.0669 m/s |
+| Speed against the reference | **+76%** |
+| Held out on 6 unseen worlds | 39 of 43 elites upright (**91%**), **90%** of training fitness retained |
+
+The held-out number is the closest a software-only stage gets to a transfer
+test. An elite that collapses on worlds it never trained on has overfitted the
+simulator, which is the failure mode that ruins transfer to hardware.
+
+### Calibrate the axes before trusting coverage
+
+Coverage is trivially faked by choosing ranges nothing can reach, so the axis
+ranges are *measured*:
+
+```sh
+cargo run --release -p axiom-field -- pilot --samples 200
+```
+
+A pilot over 200 controllers found forward speed running to a p95 of 0.074 m/s
+and effort per metre spanning 137 to 29,129 rad/m. The first guesses here were
+0..0.30 m/s and a linear 0..400 rad/m — which would have piled almost every
+controller into a single column. Economy is binned on a log scale for that
+reason. This is the same failure that leaves Axiom's own archive at 6%
+coverage, caught before it was committed rather than after.
+
 ## Usage
 
 ```sh
@@ -107,7 +156,13 @@ cargo run -p axiom-field -- gait --ticks 200
 cargo run -p axiom-field -- gait --freq 2.0 --hip 0.15 --knee 0.12
 cargo run -p axiom-field -- record --out tests/golden/trot-nominal.json --ticks 200 --stride 10
 cargo run -p axiom-field -- verify crates/axiom-field/tests/golden/trot-nominal.json
+cargo run --release -p axiom-field -- pilot --samples 200
+cargo run --release -p axiom-field -- evolve --seed 1 --out archive.json
+cargo run --release -p axiom-field -- holdout archive.json --worlds 6
 ```
+
+Use `--release` for the search; a full run is minutes in debug and seconds in
+release.
 
 Gait parameters are flags precisely so that exploring them never requires
 editing source — which is how the committed defaults were chosen.
@@ -116,7 +171,9 @@ editing source — which is how the committed defaults were chosen.
 
 Not a transfer result. Nothing here has touched hardware, so the crate makes no
 claim about sim-to-real accuracy. It is the model that a transfer measurement
-would later be run against.
+would later be run against, and the held-out score is a proxy for transfer, not
+a measurement of it — it tests robustness to the perturbations this simulator
+knows how to apply, which is not the same as robustness to being real.
 
 ## Proof gate
 

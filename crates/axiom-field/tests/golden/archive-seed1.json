@@ -1,0 +1,2818 @@
+{
+  "robot": "nominal-mg90s-quadruped",
+  "calibrated": false,
+  "seed": 1,
+  "generations": 24,
+  "evaluated": 576,
+  "ticks": 160,
+  "worlds": 4,
+  "archive": {
+    "width": 12,
+    "height": 8,
+    "cells": [
+      {
+        "genome": {
+          "frequency_hz": 1.8568132,
+          "joints": [
+            {
+              "amplitude": 0.31410867,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.42737836,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.17059264,
+              "phase": 0.42660984,
+              "bias": 0.19417585
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.08523476,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.6293596,
+              "bias": 0.029608533
+            },
+            {
+              "amplitude": 0.035675667,
+              "phase": 0.06431026,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.7719321,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5,
+              "bias": 0.12077364
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.08529778,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.0006717369,
+          "mean_effort_per_m": 145.96225,
+          "falls": 2,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          0
+        ],
+        "generation": 10
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.0289124,
+          "joints": [
+            {
+              "amplitude": 0.04963369,
+              "phase": 0.16127995,
+              "bias": -0.08009717
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.38242638,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.42723086,
+              "bias": 0.32527375
+            },
+            {
+              "amplitude": 0.056163147,
+              "phase": 0.8588573,
+              "bias": 0.037309512
+            },
+            {
+              "amplitude": 0.2909418,
+              "phase": 0.35488287,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9985204,
+              "bias": -0.18591243
+            },
+            {
+              "amplitude": 0.035038263,
+              "phase": 0.9373102,
+              "bias": 0.013632521
+            },
+            {
+              "amplitude": 0.15223482,
+              "phase": 0.37525955,
+              "bias": 0.0038450062
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.17280203,
+          "worst_fitness": 0.10009552,
+          "mean_speed_m_s": 0.024721418,
+          "mean_effort_per_m": 184.21643,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          0
+        ],
+        "generation": 7
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.0691168,
+          "joints": [
+            {
+              "amplitude": 0.04963369,
+              "phase": 0.16127995,
+              "bias": -0.04828643
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.6611881,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.58426416,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.0026141852,
+              "phase": 0.7572381,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.33252126,
+              "phase": 0.40706348,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.12357168,
+              "bias": -0.17221983
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.04718089,
+              "bias": 0.1358136
+            },
+            {
+              "amplitude": 0.07817887,
+              "phase": 0.5206809,
+              "bias": 0.07116197
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.2740651,
+          "worst_fitness": 0.23670834,
+          "mean_speed_m_s": 0.03623334,
+          "mean_effort_per_m": 106.0028,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          0
+        ],
+        "generation": 16
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.5109482,
+          "joints": [
+            {
+              "amplitude": 0.25713927,
+              "phase": 0.9181655,
+              "bias": 0.06081409
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5697329,
+              "bias": -0.040165514
+            },
+            {
+              "amplitude": 0.24546146,
+              "phase": 0.6608753,
+              "bias": 0.21336697
+            },
+            {
+              "amplitude": 0.052468315,
+              "phase": 0.965003,
+              "bias": 0.19156553
+            },
+            {
+              "amplitude": 0.1373154,
+              "phase": 0.3780597,
+              "bias": -0.07874637
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.017465174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.09469207,
+              "phase": 0.9125594,
+              "bias": 0.059449002
+            },
+            {
+              "amplitude": 0.13368192,
+              "phase": 0.4734535,
+              "bias": -0.08225999
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.32838297,
+          "worst_fitness": 0.24599831,
+          "mean_speed_m_s": 0.049299594,
+          "mean_effort_per_m": 166.97195,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          0
+        ],
+        "generation": 15
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.9213544,
+              "bias": 0.14856514
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.5288091,
+              "bias": -0.08051078
+            },
+            {
+              "amplitude": 0.17447042,
+              "phase": 0.4493494,
+              "bias": 0.17063972
+            },
+            {
+              "amplitude": 0.13667224,
+              "phase": 0.8120887,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.5259894,
+              "bias": 0.024909511
+            },
+            {
+              "amplitude": 0.079344705,
+              "phase": 0.2263879,
+              "bias": -0.025334053
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.8811376,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.60181355,
+              "bias": -0.02435483
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.38428378,
+          "worst_fitness": 0.22165468,
+          "mean_speed_m_s": 0.05651801,
+          "mean_effort_per_m": 160.9766,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          4,
+          0
+        ],
+        "generation": 15
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": -0.06464122
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.42737836,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.15907483,
+              "phase": 0.4493494,
+              "bias": 0.10347494
+            },
+            {
+              "amplitude": 0.077361986,
+              "phase": 0.8699129,
+              "bias": 0.09080954
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.49935734,
+              "bias": 0.047959536
+            },
+            {
+              "amplitude": 0.0011689141,
+              "phase": 0.2263879,
+              "bias": -0.025334053
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.8246775,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.60181355,
+              "bias": -0.02435483
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.5222894,
+          "worst_fitness": 0.43284535,
+          "mean_speed_m_s": 0.070604175,
+          "mean_effort_per_m": 92.3714,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          5,
+          0
+        ],
+        "generation": 14
+      },
+      {
+        "genome": {
+          "frequency_hz": 2.0975442,
+          "joints": [
+            {
+              "amplitude": 0.32689193,
+              "phase": 0.06366122,
+              "bias": 0.12710406
+            },
+            {
+              "amplitude": 0.16480416,
+              "phase": 0.52580136,
+              "bias": 0.064034134
+            },
+            {
+              "amplitude": 0.1004232,
+              "phase": 0.5,
+              "bias": 0.03210427
+            },
+            {
+              "amplitude": 0.1291449,
+              "phase": 0.008505583,
+              "bias": 0.020371705
+            },
+            {
+              "amplitude": 0.38738853,
+              "phase": 0.37319785,
+              "bias": -0.013717234
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.9069241,
+              "bias": -0.08323399
+            },
+            {
+              "amplitude": 0.06320687,
+              "phase": 0.5776257,
+              "bias": 0.0542648
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.2528098,
+              "bias": -0.048335075
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.5829285,
+          "worst_fitness": 0.40982112,
+          "mean_speed_m_s": 0.08152293,
+          "mean_effort_per_m": 196.76689,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          6,
+          0
+        ],
+        "generation": 13
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7375023,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.9181655,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.05796638,
+              "phase": 0.5697329,
+              "bias": 0.020275518
+            },
+            {
+              "amplitude": 0.06357866,
+              "phase": 0.4715006,
+              "bias": 0.094729416
+            },
+            {
+              "amplitude": 0.11945942,
+              "phase": 0.0,
+              "bias": 0.13196883
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.33835772,
+              "bias": 0.10401374
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.24753654,
+              "phase": 0.8617283,
+              "bias": -0.03640067
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.38814524,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.752902,
+          "worst_fitness": 0.65680045,
+          "mean_speed_m_s": 0.09837279,
+          "mean_effort_per_m": 98.22221,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          7,
+          0
+        ],
+        "generation": 16
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9463937,
+          "joints": [
+            {
+              "amplitude": 0.25967097,
+              "phase": 0.9181655,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15547983,
+              "phase": 0.49495286,
+              "bias": 0.020275518
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.5,
+              "bias": 0.094729416
+            },
+            {
+              "amplitude": 0.1397953,
+              "phase": 0.95879424,
+              "bias": 0.13532627
+            },
+            {
+              "amplitude": 0.30345774,
+              "phase": 0.4164492,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.28515375,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.69773656,
+          "worst_fitness": 0.1708869,
+          "mean_speed_m_s": 0.10627834,
+          "mean_effort_per_m": 143.36156,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          8,
+          0
+        ],
+        "generation": 15
+      },
+      {
+        "genome": {
+          "frequency_hz": 2.0350785,
+          "joints": [
+            {
+              "amplitude": 0.063456684,
+              "phase": 0.8956387,
+              "bias": -0.008647278
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5697329,
+              "bias": 0.12184088
+            },
+            {
+              "amplitude": 0.06357866,
+              "phase": 0.47833186,
+              "bias": 0.094729416
+            },
+            {
+              "amplitude": 0.11945942,
+              "phase": 0.0,
+              "bias": 0.13196883
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.36234206,
+              "bias": 0.10401374
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.33211285,
+              "phase": 0.8617283,
+              "bias": -0.03640067
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.44695348,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.8366922,
+          "worst_fitness": 0.6835369,
+          "mean_speed_m_s": 0.117536716,
+          "mean_effort_per_m": 89.88256,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          9,
+          0
+        ],
+        "generation": 18
+      },
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.5109482,
+          "joints": [
+            {
+              "amplitude": 0.2448289,
+              "phase": 0.9181655,
+              "bias": 0.06081409
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5697329,
+              "bias": -0.08600338
+            },
+            {
+              "amplitude": 0.24546146,
+              "phase": 0.5754395,
+              "bias": 0.21336697
+            },
+            {
+              "amplitude": 0.052468315,
+              "phase": 0.965003,
+              "bias": 0.13940492
+            },
+            {
+              "amplitude": 0.1529271,
+              "phase": 0.37985864,
+              "bias": -0.07874637
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.017465174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.19604951,
+              "phase": 0.9125594,
+              "bias": 0.050571606
+            },
+            {
+              "amplitude": 0.13368192,
+              "phase": 0.4734535,
+              "bias": -0.08225999
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.13861182,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.0016578548,
+          "mean_effort_per_m": 288.03802,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          1
+        ],
+        "generation": 8
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7642525,
+          "joints": [
+            {
+              "amplitude": 0.3239775,
+              "phase": 0.0,
+              "bias": -0.055135123
+            },
+            {
+              "amplitude": 0.3468784,
+              "phase": 0.5655731,
+              "bias": -0.09795281
+            },
+            {
+              "amplitude": 0.22943811,
+              "phase": 0.59466195,
+              "bias": 0.31326059
+            },
+            {
+              "amplitude": 0.14050874,
+              "phase": 0.0072803497,
+              "bias": 0.017239526
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.37051404,
+              "bias": 0.09203388
+            },
+            {
+              "amplitude": 0.013851069,
+              "phase": 0.012968779,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2614137,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.010578871,
+              "phase": 0.6458589,
+              "bias": 0.061916307
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.3881373,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.024319924,
+          "mean_effort_per_m": 319.9009,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          1
+        ],
+        "generation": 23
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.2528508,
+          "joints": [
+            {
+              "amplitude": 0.04963369,
+              "phase": 0.16127995,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52858645,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.58426416,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.0026141852,
+              "phase": 0.7572381,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.31490818,
+              "phase": 0.40706348,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.12357168,
+              "bias": -0.18867195
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9125594,
+              "bias": 0.1358136
+            },
+            {
+              "amplitude": 0.13373491,
+              "phase": 0.5206809,
+              "bias": 0.07116197
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.24562088,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.035075925,
+          "mean_effort_per_m": 265.75787,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          1
+        ],
+        "generation": 12
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9377084,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.94644755,
+              "bias": -0.0056746006
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.3738143,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.07240629,
+              "phase": 0.43880522,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.0069954395,
+              "phase": 0.9507965,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2096697,
+              "phase": 0.39974606,
+              "bias": -0.0811436
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.12839174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": -0.04974734
+            },
+            {
+              "amplitude": 0.19706751,
+              "phase": 0.5,
+              "bias": 0.091939375
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.31552708,
+          "worst_fitness": 0.114141166,
+          "mean_speed_m_s": 0.043732278,
+          "mean_effort_per_m": 262.2468,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          1
+        ],
+        "generation": 6
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7375023,
+          "joints": [
+            {
+              "amplitude": 0.12764886,
+              "phase": 0.9181655,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.3851025,
+              "bias": 0.020275518
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.5,
+              "bias": 0.0037472025
+            },
+            {
+              "amplitude": 0.2150656,
+              "phase": 0.0,
+              "bias": -0.074068464
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.32562625,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.10811442,
+              "bias": -0.11980888
+            },
+            {
+              "amplitude": 0.16065615,
+              "phase": 0.010039091,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.1181635,
+              "phase": 0.49593627,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.37965468,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.05969583,
+          "mean_effort_per_m": 258.39417,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          4,
+          1
+        ],
+        "generation": 7
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7642525,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.42737836,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.55675185,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.1397953,
+              "phase": 0.9507965,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.45833725,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.013851069,
+              "phase": 0.12839174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.5,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.47003964,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.06258029,
+          "mean_effort_per_m": 267.62723,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          5,
+          1
+        ],
+        "generation": 0
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 2.0646164,
+          "joints": [
+            {
+              "amplitude": 0.3703928,
+              "phase": 0.06366122,
+              "bias": 0.12710406
+            },
+            {
+              "amplitude": 0.16480416,
+              "phase": 0.52580136,
+              "bias": 0.064034134
+            },
+            {
+              "amplitude": 0.1004232,
+              "phase": 0.5,
+              "bias": 0.03210427
+            },
+            {
+              "amplitude": 0.057784572,
+              "phase": 0.008505583,
+              "bias": 0.020371705
+            },
+            {
+              "amplitude": 0.4338161,
+              "phase": 0.37319785,
+              "bias": -0.041716367
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9069241,
+              "bias": -0.08323399
+            },
+            {
+              "amplitude": 0.08303778,
+              "phase": 0.4310729,
+              "bias": 0.0542648
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.2528098,
+              "bias": -0.048335075
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.20195566,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.0090906415,
+          "mean_effort_per_m": 678.04614,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          2
+        ],
+        "generation": 15
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.8267018,
+          "joints": [
+            {
+              "amplitude": 0.32689193,
+              "phase": 0.06366122,
+              "bias": 0.12710406
+            },
+            {
+              "amplitude": 0.16480416,
+              "phase": 0.52580136,
+              "bias": 0.064034134
+            },
+            {
+              "amplitude": 0.14644969,
+              "phase": 0.44039798,
+              "bias": 0.07835892
+            },
+            {
+              "amplitude": 0.1291449,
+              "phase": 0.88758516,
+              "bias": -0.022798948
+            },
+            {
+              "amplitude": 0.38738853,
+              "phase": 0.37319785,
+              "bias": -0.013717234
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.9069241,
+              "bias": -0.098754756
+            },
+            {
+              "amplitude": 0.06320687,
+              "phase": 0.5776257,
+              "bias": 0.0542648
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.2528098,
+              "bias": -0.048335075
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.21761839,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.023598207,
+          "mean_effort_per_m": 532.1129,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          2
+        ],
+        "generation": 20
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9463937,
+          "joints": [
+            {
+              "amplitude": 0.308639,
+              "phase": 0.9181655,
+              "bias": 0.054461405
+            },
+            {
+              "amplitude": 0.15547983,
+              "phase": 0.49495286,
+              "bias": 0.16220908
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.5577828,
+              "bias": 0.10062569
+            },
+            {
+              "amplitude": 0.1397953,
+              "phase": 0.88292015,
+              "bias": 0.13532627
+            },
+            {
+              "amplitude": 0.38122907,
+              "phase": 0.53443587,
+              "bias": -0.1291033
+            },
+            {
+              "amplitude": 0.056265324,
+              "phase": 0.11772868,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.39318633,
+              "bias": -0.14833353
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.27772117,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.028211713,
+          "mean_effort_per_m": 586.83527,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          2
+        ],
+        "generation": 22
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.42737836,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.4493494,
+              "bias": 0.10347494
+            },
+            {
+              "amplitude": 0.077361986,
+              "phase": 0.8120887,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.45833725,
+              "bias": 0.047959536
+            },
+            {
+              "amplitude": 0.12199106,
+              "phase": 0.2263879,
+              "bias": -0.025334053
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.8246775,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.60181355,
+              "bias": -0.02435483
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.31497684,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.04512972,
+          "mean_effort_per_m": 483.57794,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          2
+        ],
+        "generation": 5
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.5033937,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.16127995,
+              "bias": -0.020588279
+            },
+            {
+              "amplitude": 0.12522629,
+              "phase": 0.5797293,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.6217212,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.12378572,
+              "phase": 0.059046164,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2909418,
+              "phase": 0.382734,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.010546744,
+              "phase": 0.88695276,
+              "bias": -0.061330803
+            },
+            {
+              "amplitude": 0.1873196,
+              "phase": 0.76715446,
+              "bias": -0.043413162
+            },
+            {
+              "amplitude": 0.08425466,
+              "phase": 0.37525955,
+              "bias": 0.0038450062
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.38416332,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.059588302,
+          "mean_effort_per_m": 553.9431,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          4,
+          2
+        ],
+        "generation": 6
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.708878,
+          "joints": [
+            {
+              "amplitude": 0.12764886,
+              "phase": 0.032191038,
+              "bias": 0.08636924
+            },
+            {
+              "amplitude": 0.037207276,
+              "phase": 0.3851025,
+              "bias": 0.062353
+            },
+            {
+              "amplitude": 0.034748927,
+              "phase": 0.5,
+              "bias": 0.09549147
+            },
+            {
+              "amplitude": 0.04143448,
+              "phase": 0.0,
+              "bias": -0.074068464
+            },
+            {
+              "amplitude": 0.33401126,
+              "phase": 0.32622367,
+              "bias": 0.13848874
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.10811442,
+              "bias": -0.14512745
+            },
+            {
+              "amplitude": 0.22397865,
+              "phase": 0.010039091,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.1181635,
+              "phase": 0.49535888,
+              "bias": -0.11192161
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.43981102,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.06462246,
+          "mean_effort_per_m": 668.456,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          5,
+          2
+        ],
+        "generation": 16
+      },
+      {
+        "genome": {
+          "frequency_hz": 2.0189195,
+          "joints": [
+            {
+              "amplitude": 0.20069838,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.512094,
+              "bias": -0.024316229
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.5195866,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.2085913,
+              "phase": 0.04750824,
+              "bias": 0.2223588
+            },
+            {
+              "amplitude": 0.30008268,
+              "phase": 0.5312226,
+              "bias": -0.014724493
+            },
+            {
+              "amplitude": 0.11378076,
+              "phase": 0.9970663,
+              "bias": 0.0058737844
+            },
+            {
+              "amplitude": 0.10036362,
+              "phase": 0.92768407,
+              "bias": 0.09360136
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52057624,
+              "bias": -0.068280675
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.49274912,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.07778394,
+          "mean_effort_per_m": 611.874,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          6,
+          2
+        ],
+        "generation": 18
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.7642525,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.42737836,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.5195866,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.077361986,
+              "phase": 0.9507965,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.45833725,
+              "bias": -0.014724493
+            },
+            {
+              "amplitude": 0.116376095,
+              "phase": 0.12839174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.10036362,
+              "phase": 0.8246775,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5,
+              "bias": 0.0
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.14220995,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.012054455,
+          "mean_effort_per_m": 878.23895,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          3
+        ],
+        "generation": 2
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9377084,
+          "joints": [
+            {
+              "amplitude": 0.059545636,
+              "phase": 0.94644755,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.3738143,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.07240629,
+              "phase": 0.50659704,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9507965,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2096697,
+              "phase": 0.45833725,
+              "bias": -0.0811436
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.16062543,
+              "bias": -0.01913017
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.8550396,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.13894975,
+              "phase": 0.5,
+              "bias": 0.091939375
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.16358647,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.022927877,
+          "mean_effort_per_m": 1750.3677,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          3
+        ],
+        "generation": 5
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.723159,
+          "joints": [
+            {
+              "amplitude": 0.35637835,
+              "phase": 0.9181655,
+              "bias": 0.08866343
+            },
+            {
+              "amplitude": 0.05796638,
+              "phase": 0.5697329,
+              "bias": 0.020275518
+            },
+            {
+              "amplitude": 0.1004232,
+              "phase": 0.5,
+              "bias": 0.03210427
+            },
+            {
+              "amplitude": 0.082839094,
+              "phase": 0.972005,
+              "bias": 0.020371705
+            },
+            {
+              "amplitude": 0.32617265,
+              "phase": 0.37319785,
+              "bias": -0.040480256
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.92593896,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.08357197,
+              "phase": 0.9125594,
+              "bias": 0.0542648
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.38814524,
+              "bias": -0.10291463
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.19396472,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.027827002,
+          "mean_effort_per_m": 1100.4902,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          3
+        ],
+        "generation": 2
+      },
+      {
+        "genome": {
+          "frequency_hz": 2.0975442,
+          "joints": [
+            {
+              "amplitude": 0.32689193,
+              "phase": 0.9181655,
+              "bias": 0.08866343
+            },
+            {
+              "amplitude": 0.16480416,
+              "phase": 0.55219066,
+              "bias": 0.064034134
+            },
+            {
+              "amplitude": 0.1004232,
+              "phase": 0.5,
+              "bias": 0.03210427
+            },
+            {
+              "amplitude": 0.082839094,
+              "phase": 0.008505583,
+              "bias": 0.020371705
+            },
+            {
+              "amplitude": 0.38738853,
+              "phase": 0.37319785,
+              "bias": -0.040480256
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.9069241,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.67448306,
+              "bias": 0.0542648
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.2528098,
+              "bias": -0.10291463
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.2132348,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.041107528,
+          "mean_effort_per_m": 929.1117,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          3
+        ],
+        "generation": 9
+      },
+      {
+        "genome": {
+          "frequency_hz": 2.0624273,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.512094,
+              "bias": -0.024316229
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.5195866,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.2085913,
+              "phase": 0.14826742,
+              "bias": 0.1197851
+            },
+            {
+              "amplitude": 0.30008268,
+              "phase": 0.5312226,
+              "bias": -0.014724493
+            },
+            {
+              "amplitude": 0.11378076,
+              "phase": 0.9521257,
+              "bias": 0.0058737844
+            },
+            {
+              "amplitude": 0.08223187,
+              "phase": 0.8246775,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52057624,
+              "bias": -0.0099301785
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.26342157,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.053539596,
+          "mean_effort_per_m": 925.4144,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          4,
+          3
+        ],
+        "generation": 21
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.987675,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.512094,
+              "bias": -0.024316229
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.5195866,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.2085913,
+              "phase": 0.010479093,
+              "bias": 0.1197851
+            },
+            {
+              "amplitude": 0.30008268,
+              "phase": 0.5312226,
+              "bias": -0.014724493
+            },
+            {
+              "amplitude": 0.11378076,
+              "phase": 0.9970663,
+              "bias": 0.0058737844
+            },
+            {
+              "amplitude": 0.10036362,
+              "phase": 0.8246775,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52057624,
+              "bias": -0.0099301785
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.40397707,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.0681205,
+          "mean_effort_per_m": 876.1532,
+          "falls": 1,
+          "worlds": 4
+        },
+        "cell": [
+          5,
+          3
+        ],
+        "generation": 11
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.907658,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.21663477,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.2959698,
+              "phase": 0.4493494,
+              "bias": -0.025878817
+            },
+            {
+              "amplitude": 0.19038342,
+              "phase": 0.8120887,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.11864161,
+              "phase": 0.45833725,
+              "bias": 0.047959536
+            },
+            {
+              "amplitude": 0.12199106,
+              "phase": 0.2263879,
+              "bias": -0.021418236
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.67663825,
+              "bias": -0.09833617
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.60181355,
+              "bias": -0.02435483
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.067190506,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.00826196,
+          "mean_effort_per_m": 1867.6351,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          4
+        ],
+        "generation": 12
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.5109482,
+          "joints": [
+            {
+              "amplitude": 0.2448289,
+              "phase": 0.9181655,
+              "bias": 0.06081409
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5697329,
+              "bias": -0.09463966
+            },
+            {
+              "amplitude": 0.24546146,
+              "phase": 0.5,
+              "bias": 0.21336697
+            },
+            {
+              "amplitude": 0.052468315,
+              "phase": 0.965003,
+              "bias": 0.13940492
+            },
+            {
+              "amplitude": 0.1529271,
+              "phase": 0.37985864,
+              "bias": -0.07874637
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.08357197,
+              "phase": 0.9125594,
+              "bias": 0.050571606
+            },
+            {
+              "amplitude": 0.13368192,
+              "phase": 0.38814524,
+              "bias": -0.08225999
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.16556433,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.02186036,
+          "mean_effort_per_m": 1929.1588,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          4
+        ],
+        "generation": 5
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9463937,
+          "joints": [
+            {
+              "amplitude": 0.25967097,
+              "phase": 0.9181655,
+              "bias": 0.054461405
+            },
+            {
+              "amplitude": 0.15547983,
+              "phase": 0.49495286,
+              "bias": 0.020275518
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.5,
+              "bias": -0.023154832
+            },
+            {
+              "amplitude": 0.1397953,
+              "phase": 0.88292015,
+              "bias": 0.13532627
+            },
+            {
+              "amplitude": 0.38122907,
+              "phase": 0.4164492,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.056265324,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.3553686,
+              "bias": -0.14833353
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.1855941,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.025988858,
+          "mean_effort_per_m": 3041.682,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          4
+        ],
+        "generation": 22
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7642525,
+          "joints": [
+            {
+              "amplitude": 0.26938367,
+              "phase": 0.0,
+              "bias": -0.021444768
+            },
+            {
+              "amplitude": 0.22115315,
+              "phase": 0.5655731,
+              "bias": -0.09795281
+            },
+            {
+              "amplitude": 0.23335138,
+              "phase": 0.59466195,
+              "bias": 0.31326059
+            },
+            {
+              "amplitude": 0.14050874,
+              "phase": 0.95433736,
+              "bias": 0.017239526
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.37051404,
+              "bias": 0.09203388
+            },
+            {
+              "amplitude": 0.013851069,
+              "phase": 0.012968779,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2813089,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.6458589,
+              "bias": 0.081257
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.28286994,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.048850708,
+          "mean_effort_per_m": 1887.9982,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          4
+        ],
+        "generation": 15
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": -0.09093885
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.4939196,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.30290663,
+              "phase": 0.4493494,
+              "bias": 0.10347494
+            },
+            {
+              "amplitude": 0.09650698,
+              "phase": 0.9603354,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.3148288,
+              "phase": 0.45429206,
+              "bias": 0.047959536
+            },
+            {
+              "amplitude": 0.061842166,
+              "phase": 0.3067845,
+              "bias": -0.098140456
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.7496616,
+              "bias": -0.022228539
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5328383,
+              "bias": 0.069444135
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.24368815,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.052639477,
+          "mean_effort_per_m": 2105.4634,
+          "falls": 1,
+          "worlds": 4
+        },
+        "cell": [
+          4,
+          4
+        ],
+        "generation": 23
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.2491927,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.16127995,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5797293,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.070115104,
+              "phase": 0.58426416,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.1397953,
+              "phase": 0.059046164,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2909418,
+              "phase": 0.382734,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.05803804,
+              "phase": 0.003047943,
+              "bias": -0.061330803
+            },
+            {
+              "amplitude": 0.17897424,
+              "phase": 0.8299479,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.12,
+              "phase": 0.52315086,
+              "bias": 0.0038450062
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.052218877,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.009640077,
+          "mean_effort_per_m": 5081.0225,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          5
+        ],
+        "generation": 8
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.9377084,
+          "joints": [
+            {
+              "amplitude": 0.15,
+              "phase": 0.94644755,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.3738143,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.07240629,
+              "phase": 0.43880522,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.0069954395,
+              "phase": 0.9507965,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2096697,
+              "phase": 0.45833725,
+              "bias": -0.0811436
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.12839174,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.15,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.13894975,
+              "phase": 0.5,
+              "bias": 0.091939375
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.16284165,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.01924841,
+          "mean_effort_per_m": 4287.132,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          5
+        ],
+        "generation": 4
+      },
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.7642525,
+          "joints": [
+            {
+              "amplitude": 0.26938367,
+              "phase": 0.13760182,
+              "bias": 0.022164121
+            },
+            {
+              "amplitude": 0.22115315,
+              "phase": 0.59569323,
+              "bias": -0.060515165
+            },
+            {
+              "amplitude": 0.23335138,
+              "phase": 0.59466195,
+              "bias": 0.31326059
+            },
+            {
+              "amplitude": 0.14050874,
+              "phase": 0.0005683899,
+              "bias": -0.1168787
+            },
+            {
+              "amplitude": 0.19818889,
+              "phase": 0.5094228,
+              "bias": 0.09203388
+            },
+            {
+              "amplitude": 0.013851069,
+              "phase": 0.012968779,
+              "bias": 0.110052556
+            },
+            {
+              "amplitude": 0.14750624,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.56788975,
+              "bias": 0.081257
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.34811363,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.04899705,
+          "mean_effort_per_m": 6776.782,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          5
+        ],
+        "generation": 19
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.2528508,
+          "joints": [
+            {
+              "amplitude": 0.04963369,
+              "phase": 0.16127995,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52858645,
+              "bias": -0.13864656
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.58426416,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.056163147,
+              "phase": 0.9753469,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2909418,
+              "phase": 0.382734,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.003047943,
+              "bias": -0.061330803
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9125594,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2079623,
+              "phase": 0.37525955,
+              "bias": 0.0038450062
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.059406593,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.011653192,
+          "mean_effort_per_m": 11885.909,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          6
+        ],
+        "generation": 0
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.53223735,
+              "bias": -0.032071926
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.4493494,
+              "bias": 0.10347494
+            },
+            {
+              "amplitude": 0.077361986,
+              "phase": 0.8120887,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.26016408,
+              "phase": 0.45833725,
+              "bias": 0.047959536
+            },
+            {
+              "amplitude": 0.038579933,
+              "phase": 0.2263879,
+              "bias": -0.098140456
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.7496616,
+              "bias": -0.022228539
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.60181355,
+              "bias": 0.10682894
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.13822956,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.014403859,
+          "mean_effort_per_m": 8623.216,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          6
+        ],
+        "generation": 8
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.7850292,
+          "joints": [
+            {
+              "amplitude": 0.2505631,
+              "phase": 0.9213544,
+              "bias": 0.14856514
+            },
+            {
+              "amplitude": 0.044267133,
+              "phase": 0.4553523,
+              "bias": -0.16736464
+            },
+            {
+              "amplitude": 0.17447042,
+              "phase": 0.4493494,
+              "bias": 0.17063972
+            },
+            {
+              "amplitude": 0.11750296,
+              "phase": 0.8120887,
+              "bias": 0.0069111288
+            },
+            {
+              "amplitude": 0.1536095,
+              "phase": 0.5259894,
+              "bias": 0.024909511
+            },
+            {
+              "amplitude": 0.079344705,
+              "phase": 0.2263879,
+              "bias": -0.025334053
+            },
+            {
+              "amplitude": 0.041797087,
+              "phase": 0.8811376,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.07713145,
+              "phase": 0.60181355,
+              "bias": -0.02435483
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.17690806,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.03180016,
+          "mean_effort_per_m": 11197.4375,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          2,
+          6
+        ],
+        "generation": 21
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "genome": {
+          "frequency_hz": 1.5109482,
+          "joints": [
+            {
+              "amplitude": 0.2448289,
+              "phase": 0.9181655,
+              "bias": 0.06081409
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.5697329,
+              "bias": -0.08600338
+            },
+            {
+              "amplitude": 0.3811896,
+              "phase": 0.5754395,
+              "bias": 0.12461446
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.8311382,
+              "bias": 0.13940492
+            },
+            {
+              "amplitude": 0.115668155,
+              "phase": 0.51825225,
+              "bias": -0.07874637
+            },
+            {
+              "amplitude": 0.09988282,
+              "phase": 0.017465174,
+              "bias": 0.027271196
+            },
+            {
+              "amplitude": 0.06715247,
+              "phase": 0.9125594,
+              "bias": 0.08604927
+            },
+            {
+              "amplitude": 0.13368192,
+              "phase": 0.4734535,
+              "bias": -0.08225999
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.120395884,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.009369262,
+          "mean_effort_per_m": 41763.156,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          0,
+          7
+        ],
+        "generation": 20
+      },
+      {
+        "genome": {
+          "frequency_hz": 1.2528508,
+          "joints": [
+            {
+              "amplitude": 0.04963369,
+              "phase": 0.16127995,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52858645,
+              "bias": -0.16185783
+            },
+            {
+              "amplitude": 0.20552632,
+              "phase": 0.58426416,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.056163147,
+              "phase": 0.7670848,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.2909418,
+              "phase": 0.47276443,
+              "bias": 0.14761671
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.050664306,
+              "bias": -0.18867195
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.9125594,
+              "bias": 0.1358136
+            },
+            {
+              "amplitude": 0.2079623,
+              "phase": 0.47136852,
+              "bias": 0.07116197
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.14046314,
+          "worst_fitness": 0.00014150317,
+          "mean_speed_m_s": 0.019645229,
+          "mean_effort_per_m": 16549.924,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          1,
+          7
+        ],
+        "generation": 11
+      },
+      null,
+      {
+        "genome": {
+          "frequency_hz": 2.0189195,
+          "joints": [
+            {
+              "amplitude": 0.17346114,
+              "phase": 0.0,
+              "bias": 0.0
+            },
+            {
+              "amplitude": 0.08092444,
+              "phase": 0.512094,
+              "bias": -0.024316229
+            },
+            {
+              "amplitude": 0.24168299,
+              "phase": 0.5195866,
+              "bias": 0.13087186
+            },
+            {
+              "amplitude": 0.2085913,
+              "phase": 0.18831506,
+              "bias": 0.2223588
+            },
+            {
+              "amplitude": 0.30008268,
+              "phase": 0.4662733,
+              "bias": -0.014724493
+            },
+            {
+              "amplitude": 0.06544236,
+              "phase": 0.98862106,
+              "bias": 0.0058737844
+            },
+            {
+              "amplitude": 0.10036362,
+              "phase": 0.92768407,
+              "bias": 0.09360136
+            },
+            {
+              "amplitude": 0.0,
+              "phase": 0.52057624,
+              "bias": -0.068280675
+            }
+          ]
+        },
+        "score": {
+          "fitness": 0.31742102,
+          "worst_fitness": 0.0,
+          "mean_speed_m_s": 0.047236,
+          "mean_effort_per_m": 96378.36,
+          "falls": 0,
+          "worlds": 4
+        },
+        "cell": [
+          3,
+          7
+        ],
+        "generation": 20
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "history": [
+    {
+      "generation": 0,
+      "best_fitness": 0.68995583,
+      "coverage": 0.15625,
+      "occupied": 15,
+      "fell_somewhere": 1
+    },
+    {
+      "generation": 1,
+      "best_fitness": 0.68995583,
+      "coverage": 0.1875,
+      "occupied": 18,
+      "fell_somewhere": 12
+    },
+    {
+      "generation": 2,
+      "best_fitness": 0.68995583,
+      "coverage": 0.21875,
+      "occupied": 21,
+      "fell_somewhere": 3
+    },
+    {
+      "generation": 3,
+      "best_fitness": 0.68995583,
+      "coverage": 0.21875,
+      "occupied": 21,
+      "fell_somewhere": 7
+    },
+    {
+      "generation": 4,
+      "best_fitness": 0.68995583,
+      "coverage": 0.23958333,
+      "occupied": 23,
+      "fell_somewhere": 6
+    },
+    {
+      "generation": 5,
+      "best_fitness": 0.68995583,
+      "coverage": 0.25,
+      "occupied": 24,
+      "fell_somewhere": 5
+    },
+    {
+      "generation": 6,
+      "best_fitness": 0.68995583,
+      "coverage": 0.26041666,
+      "occupied": 25,
+      "fell_somewhere": 7
+    },
+    {
+      "generation": 7,
+      "best_fitness": 0.68995583,
+      "coverage": 0.29166666,
+      "occupied": 28,
+      "fell_somewhere": 4
+    },
+    {
+      "generation": 8,
+      "best_fitness": 0.68995583,
+      "coverage": 0.30208334,
+      "occupied": 29,
+      "fell_somewhere": 10
+    },
+    {
+      "generation": 9,
+      "best_fitness": 0.68995583,
+      "coverage": 0.3125,
+      "occupied": 30,
+      "fell_somewhere": 3
+    },
+    {
+      "generation": 10,
+      "best_fitness": 0.68995583,
+      "coverage": 0.3125,
+      "occupied": 30,
+      "fell_somewhere": 6
+    },
+    {
+      "generation": 11,
+      "best_fitness": 0.68995583,
+      "coverage": 0.33333334,
+      "occupied": 32,
+      "fell_somewhere": 10
+    },
+    {
+      "generation": 12,
+      "best_fitness": 0.68995583,
+      "coverage": 0.34375,
+      "occupied": 33,
+      "fell_somewhere": 7
+    },
+    {
+      "generation": 13,
+      "best_fitness": 0.68995583,
+      "coverage": 0.34375,
+      "occupied": 33,
+      "fell_somewhere": 7
+    },
+    {
+      "generation": 14,
+      "best_fitness": 0.68995583,
+      "coverage": 0.34375,
+      "occupied": 33,
+      "fell_somewhere": 6
+    },
+    {
+      "generation": 15,
+      "best_fitness": 0.69773656,
+      "coverage": 0.35416666,
+      "occupied": 34,
+      "fell_somewhere": 3
+    },
+    {
+      "generation": 16,
+      "best_fitness": 0.752902,
+      "coverage": 0.36458334,
+      "occupied": 35,
+      "fell_somewhere": 3
+    },
+    {
+      "generation": 17,
+      "best_fitness": 0.752902,
+      "coverage": 0.36458334,
+      "occupied": 35,
+      "fell_somewhere": 9
+    },
+    {
+      "generation": 18,
+      "best_fitness": 0.8366922,
+      "coverage": 0.38541666,
+      "occupied": 37,
+      "fell_somewhere": 7
+    },
+    {
+      "generation": 19,
+      "best_fitness": 0.8366922,
+      "coverage": 0.39583334,
+      "occupied": 38,
+      "fell_somewhere": 8
+    },
+    {
+      "generation": 20,
+      "best_fitness": 0.8366922,
+      "coverage": 0.41666666,
+      "occupied": 40,
+      "fell_somewhere": 9
+    },
+    {
+      "generation": 21,
+      "best_fitness": 0.8366922,
+      "coverage": 0.4375,
+      "occupied": 42,
+      "fell_somewhere": 8
+    },
+    {
+      "generation": 22,
+      "best_fitness": 0.8366922,
+      "coverage": 0.4375,
+      "occupied": 42,
+      "fell_somewhere": 6
+    },
+    {
+      "generation": 23,
+      "best_fitness": 0.8366922,
+      "coverage": 0.44791666,
+      "occupied": 43,
+      "fell_somewhere": 6
+    }
+  ]
+}

@@ -72,6 +72,9 @@ struct Actuator {
     parent: RigidBodyHandle,
     child: RigidBodyHandle,
     servo: Servo,
+    /// Mounting error: the servo believes it holds its commanded angle, but
+    /// the link actually sits this far away from it.
+    calibration_offset_rad: f32,
 }
 
 pub struct FieldSim {
@@ -94,6 +97,20 @@ pub struct FieldSim {
 
 impl FieldSim {
     pub fn new(config: RobotConfig) -> Self {
+        Self::with_calibration(config, [0.0; ACTUATOR_COUNT])
+    }
+
+    /// Builds the robot with per-joint mounting errors.
+    ///
+    /// The links are still assembled at the nominal stance and only the motor
+    /// targets carry the offset, which is what happens physically: a robot
+    /// with a mis-pressed servo horn twitches into its real pose on power-up.
+    /// Building the geometry offset instead would risk spawning a foot below
+    /// the floor, since spawn height is derived from the nominal stance.
+    pub fn with_calibration(
+        config: RobotConfig,
+        calibration_offsets_rad: [f32; ACTUATOR_COUNT],
+    ) -> Self {
         let mut bodies = RigidBodySet::new();
         let mut colliders = ColliderSet::new();
         let mut impulse_joints = ImpulseJointSet::new();
@@ -214,17 +231,20 @@ impl FieldSim {
                 .contacts_enabled(false);
             let knee_handle = impulse_joints.insert(upper, lower, knee_joint, true);
 
+            let leg = actuators.len() / 2;
             actuators.push(Actuator {
                 joint: hip_handle,
                 parent: chassis,
                 child: upper,
                 servo: Servo::with_centre(&config.servo, hip_stance),
+                calibration_offset_rad: calibration_offsets_rad[leg * 2],
             });
             actuators.push(Actuator {
                 joint: knee_handle,
                 parent: upper,
                 child: lower,
                 servo: Servo::with_centre(&config.servo, knee_stance),
+                calibration_offset_rad: calibration_offsets_rad[leg * 2 + 1],
             });
         }
 
@@ -275,10 +295,11 @@ impl FieldSim {
         for (index, actuator) in self.actuators.iter_mut().enumerate() {
             let action = actions.get(index).copied().unwrap_or(0.0);
             let commanded = actuator.servo.step(action, control_dt);
+            let held = commanded + actuator.calibration_offset_rad;
             if let Some(joint) = self.impulse_joints.get_mut(actuator.joint, true) {
                 joint
                     .data
-                    .set_motor_position(JointAxis::AngX, commanded, stiffness, damping);
+                    .set_motor_position(JointAxis::AngX, held, stiffness, damping);
             }
         }
 
@@ -301,6 +322,17 @@ impl FieldSim {
 
         self.tick += 1;
         self.sample()
+    }
+
+    /// The angles the servos currently believe they hold, in actuator order.
+    ///
+    /// Accumulating the change in these across a run gives total commanded
+    /// joint travel, which is the effort proxy the search bins on.
+    pub fn commanded_angles(&self) -> Vec<f32> {
+        self.actuators
+            .iter()
+            .map(|actuator| actuator.servo.commanded_rad())
+            .collect()
     }
 
     pub fn sample(&self) -> Sample {

@@ -3,7 +3,16 @@
 
 use std::process::ExitCode;
 
-use axiom_field::{RobotConfig, Trajectory, gait::Gait, sim::FieldSim};
+use axiom::{qd::AxisSpec, rng::Rng};
+use axiom_field::{
+    RobotConfig, Trajectory,
+    controller::CpgGenome,
+    evaluate::evaluate_ensemble,
+    gait::{Gait, sine_gait},
+    perturb::{Perturbation, Spread},
+    search::{SearchConfig, SearchReport, holdout, run_search},
+    sim::FieldSim,
+};
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -15,6 +24,9 @@ fn main() -> ExitCode {
         Some("gait") => gait(rest),
         Some("record") => record(rest),
         Some("verify") => verify(rest),
+        Some("pilot") => pilot(rest),
+        Some("evolve") => evolve(rest),
+        Some("holdout") => holdout_command(rest),
         Some("help") | Some("--help") | Some("-h") | None => {
             print_help();
             ExitCode::SUCCESS
@@ -44,6 +56,18 @@ USAGE:
 
   verify  <trajectory.json> [--config <robot.toml>]
           Replay the reference trot and compare it against a golden file.
+
+  pilot   [--config <robot.toml>] [--samples <n>] [--ticks <n>] [--seed <n>]
+          Sample random and mutated controllers and report the spread of the
+          behaviour descriptors. Run this before choosing archive axis ranges:
+          a guessed range leaves most of the archive unreachable.
+
+  evolve  [--config <robot.toml>] [--seed <n>] [--generations <n>] [--batch <n>]
+          [--ticks <n>] [--worlds <n>] [--out <report.json>]
+          Run MAP-Elites over the simulator with domain randomization.
+
+  holdout <report.json> [--config <robot.toml>] [--seed <n>] [--worlds <n>]
+          Re-score an archive on worlds the search never trained on.
 
 All physical parameters live in robot.toml. Calibrating this model against a
 real robot is a diff of that file, never a code change."
@@ -247,6 +271,202 @@ fn verify(arguments: &[String]) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn pilot(arguments: &[String]) -> ExitCode {
+    let config = match load(arguments) {
+        Ok(config) => config,
+        Err(code) => return code,
+    };
+    let samples = number(arguments, "--samples", 120);
+    let ticks = number(arguments, "--ticks", 160);
+    let seed = number(arguments, "--seed", 7) as u64;
+
+    report_provenance(&config);
+    let spread = Spread::default();
+    let ensemble = Perturbation::ensemble(seed ^ 0x5eed, &spread, 3);
+    let mut rng = Rng::new(seed);
+    let seed_genome = CpgGenome::from_gait(&sine_gait());
+
+    let mut speeds = Vec::new();
+    let mut efforts = Vec::new();
+    let mut standing = 0usize;
+
+    for index in 0..samples {
+        let genome = if index % 2 == 0 {
+            seed_genome.mutate(&mut rng, 0.25)
+        } else {
+            CpgGenome::random(&mut rng)
+        };
+        let score = evaluate_ensemble(&config, &genome, &ensemble, ticks);
+        if score.falls == score.worlds {
+            continue;
+        }
+        standing += 1;
+        speeds.push(score.mean_speed_m_s);
+        efforts.push(score.mean_effort_per_m);
+    }
+
+    if speeds.is_empty() {
+        eprintln!("no sampled controller stayed upright; nothing to calibrate from");
+        return ExitCode::FAILURE;
+    }
+
+    println!("samples:    {samples} ({standing} stood in at least one world)");
+    print_percentiles("speed (m/s)", &mut speeds);
+    print_percentiles("effort (rad/m)", &mut efforts);
+    let mut log_efforts: Vec<f32> = efforts.iter().map(|e| e.max(1e-3).log10()).collect();
+    // The archive bins economy on a log scale, so calibrate on these.
+    print_percentiles("log10 effort", &mut log_efforts);
+    println!();
+    println!("Set the archive axes to cover roughly p05..p95 of these.");
+    ExitCode::SUCCESS
+}
+
+fn print_percentiles(label: &str, values: &mut [f32]) {
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let at = |q: f32| -> f32 {
+        let index = ((values.len() - 1) as f32 * q).round() as usize;
+        values[index]
+    };
+    println!(
+        "{label:>16}: min {:>9.3}  p05 {:>9.3}  p50 {:>9.3}  p95 {:>9.3}  max {:>9.3}",
+        values[0],
+        at(0.05),
+        at(0.50),
+        at(0.95),
+        values[values.len() - 1]
+    );
+}
+
+fn search_config_from(arguments: &[String]) -> SearchConfig {
+    let default = SearchConfig::default();
+    SearchConfig {
+        seed: number(arguments, "--seed", default.seed as usize) as u64,
+        generations: number(arguments, "--generations", default.generations),
+        batch: number(arguments, "--batch", default.batch),
+        ticks: number(arguments, "--ticks", default.ticks),
+        worlds: number(arguments, "--worlds", default.worlds),
+        speed_axis: AxisSpec::new(
+            default.speed_axis.label.clone(),
+            default.speed_axis.min,
+            decimal(arguments, "--max-speed", default.speed_axis.max),
+        ),
+        effort_axis: AxisSpec::new(
+            default.effort_axis.label.clone(),
+            default.effort_axis.min,
+            decimal(arguments, "--max-effort", default.effort_axis.max),
+        ),
+        ..default
+    }
+}
+
+fn evolve(arguments: &[String]) -> ExitCode {
+    let config = match load(arguments) {
+        Ok(config) => config,
+        Err(code) => return code,
+    };
+    let search = search_config_from(arguments);
+
+    report_provenance(&config);
+    println!(
+        "search:     {} generations x {} genomes x {} worlds",
+        search.generations, search.batch, search.worlds
+    );
+    // The reference trot scored on the very same worlds, so "better than the
+    // hand-tuned gait" is a measurement rather than a claim.
+    let baseline = evaluate_ensemble(
+        &config,
+        &CpgGenome::from_gait(&sine_gait()),
+        &search.training_ensemble(),
+        search.ticks,
+    );
+    let report = run_search(&search, &config);
+
+    println!(
+        "reference:  trot walks {:.4} m/s on these worlds (fell in {} of {})",
+        baseline.mean_speed_m_s, baseline.falls, baseline.worlds
+    );
+    println!(
+        "evaluated:  {} genomes ({} simulated runs)",
+        report.evaluated,
+        report.evaluated * report.worlds
+    );
+    println!(
+        "archive:    {} of {} cells ({:.1}% coverage)",
+        report.archive.occupied_count(),
+        search.archive_width * search.archive_height,
+        report.coverage() * 100.0
+    );
+    match report.best() {
+        Some(best) => {
+            println!(
+                "best:       fitness {:.4} m, speed {:.4} m/s, cell {:?}",
+                best.score.fitness, best.score.mean_speed_m_s, best.cell
+            );
+            println!(
+                "            worst world {:.4} m, fell in {} of {} worlds",
+                best.score.worst_fitness, best.score.falls, best.score.worlds
+            );
+            if baseline.mean_speed_m_s.abs() > 1e-4 {
+                println!(
+                    "            {:+.0}% speed against the reference trot",
+                    (best.score.mean_speed_m_s / baseline.mean_speed_m_s - 1.0) * 100.0
+                );
+            }
+        }
+        None => println!("best:       none — no controller stayed upright"),
+    }
+
+    if let Some(out) = flag(arguments, "--out") {
+        if let Err(error) = std::fs::write(&out, report.to_json()) {
+            eprintln!("failed to write {out}: {error}");
+            return ExitCode::FAILURE;
+        }
+        println!("saved:      {out}");
+    }
+    ExitCode::SUCCESS
+}
+
+fn holdout_command(arguments: &[String]) -> ExitCode {
+    let Some(path) = arguments.first().filter(|value| !value.starts_with("--")) else {
+        eprintln!("holdout requires a search report path");
+        return ExitCode::from(2);
+    };
+    let config = match load(arguments) {
+        Ok(config) => config,
+        Err(code) => return code,
+    };
+    let seed = number(arguments, "--seed", 0xbeef) as u64;
+    let worlds = number(arguments, "--worlds", 6);
+
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) => {
+            eprintln!("failed to read {path}: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let report = match SearchReport::from_json(&text) {
+        Ok(report) => report,
+        Err(error) => {
+            eprintln!("failed to parse {path}: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let held = holdout(&report, &config, &Spread::default(), seed, worlds);
+    println!("elites:     {}", held.tested);
+    println!(
+        "robust:     {} stood in all {worlds} unseen worlds ({:.0}%)",
+        held.robust,
+        held.robust_fraction() * 100.0
+    );
+    println!(
+        "retained:   {:.0}% of training fitness on unseen worlds",
+        held.retained_fraction * 100.0
+    );
+    ExitCode::SUCCESS
 }
 
 #[cfg(test)]
