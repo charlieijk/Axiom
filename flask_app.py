@@ -29,6 +29,14 @@ HOP_BY_HOP_HEADERS = {
 PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 HTTP = requests.Session()
 HTTP.trust_env = False
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _flask_host() -> str:
+    host = os.environ.get("FLASK_HOST", "127.0.0.1")
+    if host not in LOOPBACK_HOSTS:
+        raise RuntimeError("The Flask companion may only bind to a loopback host.")
+    return host
 
 
 def _is_loopback_http(url: str) -> bool:
@@ -242,7 +250,7 @@ if __name__ == "__main__":
         process = start_backend(backend_url)
         runtime_app = create_app(backend_url=backend_url)
         runtime_app.run(
-            host=os.environ.get("FLASK_HOST", "127.0.0.1"),
+            host=_flask_host(),
             port=int(os.environ.get("PORT", "5110")),
             debug=False,
             threaded=True,

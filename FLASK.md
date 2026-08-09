@@ -14,7 +14,8 @@ python flask_app.py
 ```
 
 Open <http://127.0.0.1:5110>. Set `PORT` to change the public Flask port and
-`FLASK_HOST` to change its bind address. The safe default is loopback.
+`FLASK_HOST` to select `127.0.0.1`, `localhost`, or `::1`. Other bind
+addresses are rejected so the unauthenticated companion remains local-only.
 
 When run directly, Flask supervises this private backend command:
 
