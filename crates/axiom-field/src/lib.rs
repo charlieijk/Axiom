@@ -20,4 +20,4 @@ pub use config::RobotConfig;
 pub use gait::{Gait, sine_gait};
 pub use servo::Servo;
 pub use sim::{ACTUATOR_COUNT, FieldSim, LEG_COUNT, Sample};
-pub use trajectory::Trajectory;
+pub use trajectory::{Trajectory, TrajectorySummary};

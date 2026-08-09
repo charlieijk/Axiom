@@ -1,15 +1,22 @@
-//! Recorded runs, and the tolerance rules for comparing them.
+//! Recorded runs, and the rules for comparing them.
 //!
-//! Two different determinism claims live here, and conflating them would make
-//! the gate dishonest:
+//! Two different claims live here, and conflating them would make the gate
+//! dishonest:
 //!
-//! * **Within one binary**, the same inputs must produce bit-identical output.
-//!   That is asserted exactly, with no tolerance.
-//! * **Across platforms and optimization levels**, rapier's contact solver
-//!   accumulates floating-point differences, so a committed golden trajectory
-//!   is compared inside a tolerance band. The band is a documented modelling
-//!   choice, not a bug being papered over: it is tight enough that a real
-//!   change in the physics or the parameters breaks it.
+//! * **Within one binary**, the same inputs produce bit-identical output. That
+//!   is asserted exactly, with no tolerance, and it is a strong claim: it is
+//!   what makes an evolutionary search reproducible.
+//! * **Across architectures**, they do not. Legged contact is close to
+//!   chaotic, so the floating-point differences between x86_64 and aarch64
+//!   amplify rather than average out: the same commit diverges by ~10 mm
+//!   within two seconds of walking. No fixed pointwise band is both meaningful
+//!   and passing, so [`Trajectory::compare`] is a same-machine tool and the
+//!   committed golden is compared as a behavioural [`TrajectorySummary`].
+//!
+//! The honest consequence is that the committed artifact anchors *behaviour*
+//! — it walks, forward, upright, roughly this far — and cannot detect a small
+//! parameter change. Detecting those needs two runs from one binary, which is
+//! what `a_small_parameter_change_is_detected_within_one_binary` does.
 
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +41,16 @@ pub struct Trajectory {
     /// Only every `stride`th sample is stored, to keep the file reviewable.
     pub stride: usize,
     pub samples: Vec<Sample>,
+}
+
+/// The coarse behavioural shape of a run: what a comparison can rely on when
+/// the two runs did not come from the same machine.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TrajectorySummary {
+    pub forward_travel_m: f32,
+    pub lateral_drift_m: f32,
+    pub final_height_m: f32,
+    pub max_tilt_rad: f32,
 }
 
 #[derive(Debug)]
@@ -110,8 +127,34 @@ impl Trajectory {
         }
     }
 
+    /// The coarse behavioural shape of a run.
+    ///
+    /// This is what survives a change of architecture. Pointwise position does
+    /// not: contact dynamics amplify floating-point differences, so the same
+    /// build on x86_64 and aarch64 drifts millimetres apart within a couple of
+    /// seconds and further after that.
+    pub fn summary(&self) -> TrajectorySummary {
+        let (Some(first), Some(last)) = (self.samples.first(), self.samples.last()) else {
+            return TrajectorySummary::default();
+        };
+        TrajectorySummary {
+            forward_travel_m: last.forward_m() - first.forward_m(),
+            lateral_drift_m: last.lateral_m() - first.lateral_m(),
+            final_height_m: last.height_m(),
+            max_tilt_rad: self
+                .samples
+                .iter()
+                .map(|sample| sample.tilt_rad)
+                .fold(0.0_f32, f32::max),
+        }
+    }
+
     /// Compares against a reference, reporting the first sample that drifts
     /// outside the tolerance band rather than a bare boolean.
+    ///
+    /// **Same machine only.** Use this to compare two runs from one binary, or
+    /// a recording against a replay on the hardware that produced it. Across
+    /// architectures, compare [`Trajectory::summary`] instead.
     pub fn compare(&self, reference: &Self) -> Result<(), Divergence> {
         if self.samples.len() != reference.samples.len() {
             return Err(Divergence {

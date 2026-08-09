@@ -1,9 +1,14 @@
-//! The committed reference run.
+//! The committed reference run, and what it can honestly prove.
 //!
-//! This is the regression anchor for the whole model: a known open-loop input
-//! producing a known trajectory. Any change to the geometry, the servo model,
-//! the contact parameters, or the solver configuration moves these numbers,
-//! and this test is what forces that change to be deliberate.
+//! Legged contact is close to chaotic. The same commit built on x86_64 and on
+//! aarch64 diverges by about 10 mm within two seconds of walking, and further
+//! after that, so a committed file cannot anchor pointwise position across
+//! machines. It anchors *behaviour*: the robot walks, forward, upright, about
+//! this far.
+//!
+//! Sharp detection of small parameter changes needs two runs from one binary,
+//! where the comparison is exact. Both kinds of test live here so the
+//! difference is visible rather than assumed.
 //!
 //! Re-record with:
 //!   cargo run -p axiom-field -- record \
@@ -18,18 +23,39 @@ fn golden() -> Trajectory {
 }
 
 #[test]
-fn the_reference_trot_replays_within_tolerance() {
+fn the_reference_trot_still_walks_like_the_committed_run() {
     let golden = golden();
+    let expected = golden.summary();
     let replay = Trajectory::record(
         RobotConfig::nominal(),
         sine_gait(),
         golden.ticks,
         golden.stride,
-    );
+    )
+    .summary();
 
-    if let Err(divergence) = replay.compare(&golden) {
-        panic!("the model no longer reproduces the committed reference run: {divergence}");
-    }
+    // Bands sized for cross-architecture solver noise, not for precision.
+    // A 2% chassis-mass change moves travel by ~3.8%, so this will not catch
+    // one; that is the job of the same-binary test below.
+    let travel_band = expected.forward_travel_m.abs() * 0.25;
+    assert!(
+        (replay.forward_travel_m - expected.forward_travel_m).abs() < travel_band,
+        "travel {:.4} m against a committed {:.4} m",
+        replay.forward_travel_m,
+        expected.forward_travel_m
+    );
+    assert!(
+        (replay.final_height_m - expected.final_height_m).abs() < 0.02,
+        "final height {:.4} m against a committed {:.4} m",
+        replay.final_height_m,
+        expected.final_height_m
+    );
+    assert!(
+        replay.max_tilt_rad < expected.max_tilt_rad.max(0.05) * 3.0,
+        "peak tilt {:.4} rad against a committed {:.4} rad",
+        replay.max_tilt_rad,
+        expected.max_tilt_rad
+    );
 }
 
 #[test]
@@ -50,86 +76,72 @@ fn the_golden_was_recorded_against_the_bundled_parameters() {
 #[test]
 fn the_reference_run_is_a_walk_and_not_a_fall() {
     // A trajectory that travels because the robot toppled and slid would still
-    // replay deterministically, so determinism alone is not enough: the
-    // reference run has to be locomotion for the comparison to mean anything.
+    // replay deterministically, so determinism alone proves nothing: the
+    // reference run has to be locomotion for any of this to mean anything.
     let golden = golden();
-    let config = RobotConfig::nominal();
-    let standing = config.standing_height_m();
-
-    let first = golden.samples.first().expect("golden has samples");
-    let last = golden.samples.last().expect("golden has samples");
+    let standing = RobotConfig::nominal().standing_height_m();
+    let summary = golden.summary();
 
     assert!(
-        last.height_m() > standing * 0.9,
+        summary.final_height_m > standing * 0.9,
         "the robot ended at {:.4} m against a standing height of {standing:.4} m",
-        last.height_m()
+        summary.final_height_m
     );
     assert!(
-        last.tilt_rad < 0.2,
-        "the robot ended tilted {:.3} rad",
-        last.tilt_rad
+        summary.max_tilt_rad < 0.2,
+        "the robot peaked at {:.3} rad of tilt",
+        summary.max_tilt_rad
     );
     assert!(
-        golden.forward_travel_m() > 0.5,
+        summary.forward_travel_m > 0.5,
         "the reference run only travelled {:.4} m",
-        golden.forward_travel_m()
+        summary.forward_travel_m
     );
-    // Straight-ish: lateral drift well under forward travel.
-    let lateral = (last.lateral_m() - first.lateral_m()).abs();
     assert!(
-        lateral < golden.forward_travel_m() * 0.25,
-        "lateral drift {lateral:.4} m is large next to {:.4} m of travel",
-        golden.forward_travel_m()
+        summary.lateral_drift_m.abs() < summary.forward_travel_m * 0.25,
+        "lateral drift {:.4} m is large next to {:.4} m of travel",
+        summary.lateral_drift_m,
+        summary.forward_travel_m
     );
 }
 
 #[test]
-fn a_changed_model_is_caught_by_the_golden() {
-    // Guards the guard: if the tolerance were loose enough to pass anything,
-    // this crate's central regression test would be worthless. Two percent of
-    // chassis mass is well below any plausible measurement error, and it must
-    // still be visible.
-    let golden = golden();
+fn a_small_parameter_change_is_detected_within_one_binary() {
+    // The sharp guard. Both runs come from this binary, so the comparison is
+    // exact and architecture-independent — which is exactly why it can afford
+    // a perturbation far below any plausible measurement error.
+    let baseline = Trajectory::record(RobotConfig::nominal(), sine_gait(), 200, 10);
+
     let mut altered = RobotConfig::nominal();
     altered.body.mass_kg *= 1.02;
+    let changed = Trajectory::record(altered, sine_gait(), 200, 10);
 
-    let replay = Trajectory::record(altered, sine_gait(), golden.ticks, golden.stride);
-
-    replay
-        .compare(&golden)
-        .expect_err("a 2% chassis mass change must break the golden comparison");
+    changed
+        .compare(&baseline)
+        .expect_err("a 2% chassis mass change must be detectable");
 }
 
 #[test]
-fn the_reference_gait_never_saturates_the_servo_slew_rate() {
-    // Worth knowing before any hardware comparison: at the committed
-    // amplitudes the gait never asks a servo to move faster than roughly half
-    // its rated speed, so the slew limit is not what shapes this trajectory.
-    // Halving the rated speed changes the result not at all. A gait that did
-    // saturate would diverge sharply on hardware, whose loaded speed is well
-    // below its datasheet figure.
-    let config = RobotConfig::nominal();
-    let gait = sine_gait();
-    let dt = config.sim.control_dt();
-    let half_span = 0.5 * (config.servo.max_angle_rad() - config.servo.min_angle_rad());
+fn the_reference_gait_exercises_geometry_but_not_the_servo_limits() {
+    // A load-bearing caveat for any future hardware comparison. At the
+    // committed amplitudes, halving the rated slew rate or the stall torque
+    // changes the trajectory not at all — the gait never demands either. The
+    // servo parameters most likely to be wrong on real hardware are therefore
+    // the ones this reference run cannot discriminate, and a transfer study
+    // needs a faster or heavier-loaded gait to probe them.
+    let baseline = Trajectory::record(RobotConfig::nominal(), sine_gait(), 120, 10);
 
-    let mut peak_rad_per_s = 0.0_f32;
-    let mut previous = gait.actions_at(0.0);
-    for tick in 1..200 {
-        let current = gait.actions_at(tick as f32 * dt);
-        for (now, before) in current.iter().zip(previous.iter()) {
-            peak_rad_per_s = peak_rad_per_s.max((now - before).abs() * half_span / dt);
-        }
-        previous = current;
+    for perturb in [
+        |config: &mut RobotConfig| config.servo.max_rate_deg_per_s *= 0.5,
+        |config: &mut RobotConfig| config.servo.max_torque_nm *= 0.5,
+    ] {
+        let mut altered = RobotConfig::nominal();
+        perturb(&mut altered);
+        let run = Trajectory::record(altered, sine_gait(), 120, 10);
+        assert_eq!(
+            run.samples, baseline.samples,
+            "a servo limit that the gait never reaches changed the result; \
+             the headroom note in gait.rs is stale"
+        );
     }
-
-    let rated = config.servo.max_rate_rad_per_s();
-    assert!(
-        peak_rad_per_s < rated,
-        "gait demands {peak_rad_per_s:.2} rad/s against a rated {rated:.2} rad/s"
-    );
-    assert!(
-        peak_rad_per_s > rated * 0.25,
-        "gait demands only {peak_rad_per_s:.2} rad/s of {rated:.2}; the headroom claim is stale"
-    );
 }

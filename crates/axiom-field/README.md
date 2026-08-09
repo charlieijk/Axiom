@@ -67,17 +67,37 @@ estimates for an MG90S-class robot that has not been built. Every command says
 so. When hardware exists, calibration is a diff of `robot.toml` and a re-record
 of the golden trajectory — never a code change.
 
-## Determinism
+## Determinism, and its limit
 
-Two different claims, deliberately not conflated:
+Two claims, deliberately not conflated:
 
-- **Within one binary**, identical inputs produce bit-identical output. Asserted
-  exactly, no tolerance.
-- **Across platforms and optimization levels**, rapier's contact solver
-  accumulates floating-point differences. The committed golden trajectory is
-  compared inside a tolerance band of 1 mm and 0.01 rad. That band is a
-  documented modelling choice, and a test proves it is tight enough to catch a
-  2% change in chassis mass.
+- **Within one binary**, identical inputs produce bit-identical output.
+  Asserted exactly, no tolerance. This is the strong claim, and it is what
+  makes an evolutionary search over this model reproducible.
+- **Across architectures, they do not agree.** Legged contact is close to
+  chaotic, so floating-point differences between x86_64 and aarch64 amplify
+  rather than average out — the same commit diverges by about 10 mm within two
+  seconds of walking. This was found by CI disagreeing with a laptop, not
+  assumed.
+
+So the committed golden anchors *behaviour* — it walks, forward, upright,
+roughly this far — inside bands sized for solver noise. It cannot detect a
+small parameter change, and does not pretend to. Sharp detection is a separate
+test that records two runs in one binary and compares them exactly; that one
+catches a 2% chassis-mass change.
+
+`verify` uses the pointwise comparison, so it is a same-machine tool: use it to
+check a replay on the hardware that produced the recording.
+
+## What the reference gait does not exercise
+
+Halving the rated slew rate or the stall torque changes the committed run *not
+at all* — at these amplitudes the gait demands about 2.5 rad/s against a rated
+5.2, and never approaches the torque cap. A test pins this.
+
+It matters for transfer: the servo parameters most likely to be wrong on real
+hardware are precisely the ones this reference run cannot discriminate. A
+transfer study needs a faster or more heavily loaded gait to probe them.
 
 ## Usage
 

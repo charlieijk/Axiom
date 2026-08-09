@@ -78,6 +78,11 @@ cargo run -p axiom-field -- verify crates/axiom-field/tests/golden/trot-nominal.
 verified:   21 samples match crates/axiom-field/tests/golden/trot-nominal.json
 ```
 
+`verify` compares pointwise, so it is a same-machine check — it will fail on a
+different architecture, because legged contact amplifies floating-point
+differences rather than averaging them out. The test suite compares behaviour
+instead, and keeps the sharp exact comparison for two runs from one binary.
+
 Every command prints an `UNCALIBRATED` warning first. The bundled parameters
 describe a robot nobody has built; the model is only as honest as `robot.toml`.
 
