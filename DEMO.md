@@ -13,6 +13,8 @@ controller, terrain, archive position, and replay stay connected.
    only one winner.
 4. Replay a selected body on rough terrain and connect its motion back to the
    recorded experiment.
+5. Save the run with `--save checkpoints/demo.json`, inspect it, and replay the
+   champion with `cargo run -- animate --checkpoint checkpoints/demo.json`.
 
 ## Proof gate
 
@@ -20,4 +22,7 @@ controller, terrain, archive position, and replay stay connected.
 cargo test
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
+node --check web/app.js
+node --check web/graphics3d.js
+cargo package --locked
 ```

@@ -1,18 +1,20 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::fitness::{Evaluation, TaskKind, evaluate};
 use crate::genome::{Genome, NeuralGenome, controller_input_count};
 use crate::policy::ControllerKind;
-use crate::qd::{Archive, Axis};
+use crate::qd::{Archive, Axis, Elite};
 use crate::rng::Rng;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SearchMode {
     Classic,
     MapElites,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct EvolutionConfig {
     pub seed: u64,
     pub population_size: usize,
@@ -77,16 +79,19 @@ impl fmt::Display for EvolutionConfigError {
 
 impl std::error::Error for EvolutionConfigError {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct EvolutionReport {
     pub best_genome: Genome,
+    pub best_genome_id: u64,
     pub best_evaluation: Evaluation,
     pub archive: Archive,
     pub generations: usize,
+    pub evaluated_count: usize,
     pub history: Vec<GenerationSummary>,
+    pub lineage: Vec<LineageRecord>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GenerationSummary {
     pub generation: usize,
     pub best_fitness: f32,
@@ -95,18 +100,62 @@ pub struct GenerationSummary {
     pub occupied_cells: usize,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct LineageRecord {
+    pub genome_id: u64,
+    pub parent_id: Option<u64>,
+    pub generation: usize,
+    pub controller: ControllerKind,
+    pub body_count: usize,
+    pub actuator_count: usize,
+    pub mutation_summary: String,
+}
+
+#[derive(Clone, Debug)]
+struct TrackedGenome {
+    genome_id: u64,
+    parent_id: Option<u64>,
+    generation: usize,
+    mutation_summary: String,
+    genome: Genome,
+}
+
+impl TrackedGenome {
+    fn from_elite(elite: &Elite) -> Self {
+        Self {
+            genome_id: elite.genome_id,
+            parent_id: elite.parent_id,
+            generation: elite.generation,
+            mutation_summary: elite.mutation_summary.clone(),
+            genome: elite.genome.clone(),
+        }
+    }
+}
+
 pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, EvolutionConfigError> {
     config.validate()?;
 
     let mut rng = Rng::new(config.seed);
-    let mut population: Vec<Genome> = (0..config.population_size)
+    let mut next_genome_id = 1_u64;
+    let mut lineage = Vec::new();
+    let mut population: Vec<TrackedGenome> = (0..config.population_size)
         .map(|index| {
             let controller = config.controller.unwrap_or(match index % 3 {
                 0 => ControllerKind::FeedForward,
                 1 => ControllerKind::Recurrent,
                 _ => ControllerKind::Cpg,
             });
-            Genome::minimal(controller, &mut rng)
+            let genome = Genome::minimal(controller, &mut rng);
+            let tracked = TrackedGenome {
+                genome_id: next_genome_id,
+                parent_id: None,
+                generation: 0,
+                mutation_summary: "seed genome".to_string(),
+                genome,
+            };
+            next_genome_id += 1;
+            lineage.push(lineage_record(&tracked));
+            tracked
         })
         .collect();
 
@@ -116,20 +165,32 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
         config.archive_width,
         config.archive_height,
     );
-    let mut best_genome = population[0].clone();
+    let mut best_genome = population[0].genome.clone();
+    let mut best_genome_id = population[0].genome_id;
     let mut best_evaluation = evaluate(&best_genome, config.task, config.evaluation_steps);
     let mut history = Vec::with_capacity(config.generations);
+    let mut evaluated_count = 0;
 
     for generation in 0..config.generations {
-        let mut scored = Vec::with_capacity(population.len());
-        for genome in population {
-            let evaluation = evaluate(&genome, config.task, config.evaluation_steps);
+        let current_population = std::mem::take(&mut population);
+        let mut scored = Vec::with_capacity(current_population.len());
+        for tracked in current_population {
+            let evaluation = evaluate(&tracked.genome, config.task, config.evaluation_steps);
+            evaluated_count += 1;
             if evaluation.fitness > best_evaluation.fitness {
-                best_genome = genome.clone();
+                best_genome = tracked.genome.clone();
+                best_genome_id = tracked.genome_id;
                 best_evaluation = evaluation.clone();
             }
-            archive.insert(genome.clone(), evaluation.clone());
-            scored.push((genome, evaluation));
+            archive.insert_tracked(
+                tracked.genome.clone(),
+                evaluation.clone(),
+                tracked.genome_id,
+                tracked.parent_id,
+                tracked.generation,
+                tracked.mutation_summary.clone(),
+            );
+            scored.push((tracked, evaluation));
         }
 
         scored.sort_by(|a, b| {
@@ -152,27 +213,40 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
         });
 
         let elite_count = (config.population_size / 4).max(1);
-        let elites: Vec<Genome> = scored
+        if generation + 1 == config.generations {
+            continue;
+        }
+
+        let elites: Vec<TrackedGenome> = scored
             .iter()
             .take(elite_count)
-            .map(|(genome, _)| genome.clone())
+            .map(|(tracked, _)| tracked.clone())
             .collect();
 
         let mut next_population = elites.clone();
         while next_population.len() < config.population_size {
             let parent = if config.search_mode == SearchMode::MapElites {
                 archive
-                    .sample_parent(&mut rng)
-                    .cloned()
+                    .sample_elite(&mut rng)
+                    .map(TrackedGenome::from_elite)
                     .unwrap_or_else(|| elites[rng.range_usize(elites.len())].clone())
             } else {
                 elites[rng.range_usize(elites.len())].clone()
             };
-            let mut child = parent.mutate(&mut rng);
+            let mut child = parent.genome.mutate(&mut rng);
             if let Some(controller) = config.controller {
                 force_controller(&mut child, controller, &mut rng);
             }
-            next_population.push(child);
+            let tracked = TrackedGenome {
+                genome_id: next_genome_id,
+                parent_id: Some(parent.genome_id),
+                generation: generation + 1,
+                mutation_summary: describe_mutation(&parent.genome, &child),
+                genome: child,
+            };
+            next_genome_id += 1;
+            lineage.push(lineage_record(&tracked));
+            next_population.push(tracked);
         }
 
         population = next_population;
@@ -180,11 +254,82 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
 
     Ok(EvolutionReport {
         best_genome,
+        best_genome_id,
         best_evaluation,
         archive,
         generations: config.generations,
+        evaluated_count,
         history,
+        lineage,
     })
+}
+
+fn lineage_record(tracked: &TrackedGenome) -> LineageRecord {
+    LineageRecord {
+        genome_id: tracked.genome_id,
+        parent_id: tracked.parent_id,
+        generation: tracked.generation,
+        controller: tracked.genome.controller,
+        body_count: tracked.genome.body.body_count(),
+        actuator_count: tracked.genome.body.actuator_count(),
+        mutation_summary: tracked.mutation_summary.clone(),
+    }
+}
+
+fn describe_mutation(parent: &Genome, child: &Genome) -> String {
+    let mut changes = Vec::new();
+    let body_delta = child.body.body_count() as isize - parent.body.body_count() as isize;
+    if body_delta > 0 {
+        changes.push(format!("added {body_delta} body segment"));
+    } else if body_delta < 0 {
+        changes.push(format!(
+            "removed {} body segment",
+            body_delta.unsigned_abs()
+        ));
+    }
+
+    let resized = parent
+        .body
+        .nodes
+        .iter()
+        .zip(&child.body.nodes)
+        .filter(|(before, after)| before.size != after.size)
+        .count();
+    if resized > 0 {
+        changes.push(format!("reshaped {resized} segment"));
+    }
+
+    let retuned_actuators = parent
+        .body
+        .nodes
+        .iter()
+        .zip(&child.body.nodes)
+        .filter(|(before, after)| before.actuator_strength != after.actuator_strength)
+        .count();
+    if retuned_actuators > 0 {
+        changes.push(format!("retuned {retuned_actuators} actuator"));
+    }
+
+    if parent.controller != child.controller {
+        changes.push(format!("switched to {} control", child.controller.as_str()));
+    }
+
+    let tuned_weights = parent
+        .brain
+        .connections
+        .iter()
+        .zip(&child.brain.connections)
+        .filter(|(before, after)| before.weight != after.weight)
+        .count();
+    if tuned_weights > 0 {
+        changes.push(format!("tuned {tuned_weights} neural weight"));
+    }
+
+    if changes.is_empty() {
+        "inherited without measurable mutation".to_string()
+    } else {
+        changes.join(", ")
+    }
 }
 
 fn force_controller(genome: &mut Genome, controller: ControllerKind, rng: &mut Rng) {
@@ -304,5 +449,32 @@ mod tests {
                 .elites()
                 .all(|elite| elite.genome.controller == ControllerKind::Cpg)
         );
+    }
+
+    #[test]
+    fn evolution_records_parent_lineage_for_archive_elites() {
+        let report = run_evolution(EvolutionConfig {
+            seed: 71,
+            population_size: 8,
+            generations: 3,
+            evaluation_steps: 20,
+            ..EvolutionConfig::default()
+        })
+        .expect("valid config should run");
+
+        assert!(
+            report
+                .lineage
+                .iter()
+                .any(|record| record.parent_id.is_some())
+        );
+        for elite in report.archive.elites() {
+            let record = report
+                .lineage
+                .iter()
+                .find(|record| record.genome_id == elite.genome_id)
+                .expect("every archived elite should have a lineage record");
+            assert_eq!(record.parent_id, elite.parent_id);
+        }
     }
 }

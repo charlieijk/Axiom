@@ -32,8 +32,30 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: JavaScript syntax
+        run: |
+          node --check web/app.js
+          node --check web/graphics3d.js
+
       - name: Animation smoke test
         run: cargo run -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18
 
       - name: GUI smoke test
         run: cargo run -- gui --check
+
+      - name: Package dry run
+        run: cargo package --locked
+
+  msrv:
+    name: Rust 1.85 MSRV
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust 1.85
+        uses: dtolnay/rust-toolchain@1.85
+
+      - name: Test minimum supported Rust
+        run: cargo test --workspace --locked

@@ -1,7 +1,8 @@
 use crate::genome::Genome;
 use crate::network::CompiledNetwork;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ControllerKind {
     FeedForward,
     Recurrent,

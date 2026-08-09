@@ -23,7 +23,9 @@ cargo run -- demo
 cargo run -- gui
 cargo run -- animate cpg
 cargo run -- evaluate cpg
-cargo run -- evolve --generations 10 --population 32 --steps 180
+cargo run -- evolve --generations 10 --population 32 --steps 180 --save checkpoints/run.json
+cargo run -- inspect checkpoints/run.json
+cargo run -- animate --checkpoint checkpoints/run.json --frames 160 --fps 20
 cargo run --example rough_terrain_benchmark
 ```
 
@@ -36,10 +38,23 @@ cargo run --example rough_terrain_benchmark
 - `fitness.rs` defines task rollout and the shared observation vector.
 - `qd.rs` implements MAP-Elites archive insertion, replacement, and sampling.
 - `evolution.rs` ties evaluation, archive maintenance, and parent selection together.
+- `checkpoint.rs` saves complete, versioned experiment state with atomic replacement.
 
 ## Current Scope
 
-The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. The next natural layer is individual lineage history and persistent checkpoints in the UI.
+The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. Evolved replays now carry the selected genome's real parent lineage and mutation record rather than inferring ancestry from generation aggregates.
+
+## Reproducible Experiments
+
+Save the full configuration, champion, archive, generation history, and lineage in a versioned checkpoint:
+
+```sh
+cargo run -- evolve --generations 16 --population 32 --steps 180 --seed 42 --save checkpoints/run-42.json
+cargo run -- inspect checkpoints/run-42.json
+cargo run -- animate --checkpoint checkpoints/run-42.json --frames 160 --fps 20
+```
+
+Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error.
 
 The `animate` command provides a terminal replay renderer over the same simulation loop:
 

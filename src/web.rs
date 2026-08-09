@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     io::{self, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     thread,
@@ -82,6 +83,7 @@ struct ReplayErrorResponse {
 
 #[derive(Serialize)]
 struct ReplayResponse {
+    genome_id: Option<u64>,
     controller: &'static str,
     task: &'static str,
     seed: u64,
@@ -96,6 +98,7 @@ struct ReplayResponse {
     stability: f32,
     terminal_tilt: f32,
     evolution_history: Vec<ReplayGenerationResponse>,
+    lineage: Vec<ReplayLineageResponse>,
     archive: Option<ReplayArchiveResponse>,
     dt: f32,
     body: Vec<ReplayBodyNode>,
@@ -115,6 +118,10 @@ struct ReplayArchiveResponse {
 #[derive(Serialize)]
 struct ReplayArchiveCellResponse {
     cell: [usize; 2],
+    genome_id: u64,
+    parent_id: Option<u64>,
+    generation: usize,
+    mutation_summary: String,
     fitness: f32,
     stable_distance: f32,
     body_count: f32,
@@ -128,6 +135,17 @@ struct ReplayGenerationResponse {
     mean_fitness: f32,
     archive_coverage: f32,
     occupied_cells: usize,
+}
+
+#[derive(Serialize)]
+struct ReplayLineageResponse {
+    genome_id: u64,
+    parent_id: Option<u64>,
+    generation: usize,
+    controller: &'static str,
+    body_count: usize,
+    actuator_count: usize,
+    mutation_summary: String,
 }
 
 #[derive(Serialize)]
@@ -414,47 +432,60 @@ fn replay_error_json(error: ReplayRequestError) -> String {
 }
 
 fn replay_json(request: ReplayRequest) -> String {
-    let (genome, evaluation, generations, population_size, evolution_history, archive) =
-        match request.mode {
-            ReplayMode::Minimal => {
-                let mut rng = Rng::new(request.seed);
-                let genome = Genome::minimal(request.controller, &mut rng);
-                let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
-                (genome, evaluation, 0, 1, Vec::new(), None)
-            }
-            ReplayMode::Evolved => {
-                let report = run_evolution(EvolutionConfig {
-                    seed: request.seed,
-                    population_size: request.population_size,
-                    generations: request.generations,
-                    evaluation_steps: request.evaluation_steps,
-                    task: request.task,
-                    controller: Some(request.controller),
-                    search_mode: SearchMode::MapElites,
-                    ..EvolutionConfig::default()
-                })
-                .expect("validated replay evolution config should be valid");
-                let selected = request
-                    .archive_cell()
-                    .and_then(|cell| report.archive.elite_at(cell))
-                    .or_else(|| report.archive.best())
-                    .expect("a non-empty evolution run should populate the archive");
-                let genome = selected.genome.clone();
-                let evaluation = selected.evaluation.clone();
-                let archive = Some(replay_archive_response(&report.archive, selected.cell));
-                let history = report.history;
-                (
-                    genome,
-                    evaluation,
-                    request.generations,
-                    request.population_size,
-                    history,
-                    archive,
-                )
-            }
-        };
+    let (
+        genome,
+        evaluation,
+        genome_id,
+        generations,
+        population_size,
+        evolution_history,
+        lineage,
+        archive,
+    ) = match request.mode {
+        ReplayMode::Minimal => {
+            let mut rng = Rng::new(request.seed);
+            let genome = Genome::minimal(request.controller, &mut rng);
+            let evaluation = evaluate(&genome, request.task, request.evaluation_steps);
+            (genome, evaluation, None, 0, 1, Vec::new(), Vec::new(), None)
+        }
+        ReplayMode::Evolved => {
+            let report = run_evolution(EvolutionConfig {
+                seed: request.seed,
+                population_size: request.population_size,
+                generations: request.generations,
+                evaluation_steps: request.evaluation_steps,
+                task: request.task,
+                controller: Some(request.controller),
+                search_mode: SearchMode::MapElites,
+                ..EvolutionConfig::default()
+            })
+            .expect("validated replay evolution config should be valid");
+            let selected = request
+                .archive_cell()
+                .and_then(|cell| report.archive.elite_at(cell))
+                .or_else(|| report.archive.best())
+                .expect("a non-empty evolution run should populate the archive");
+            let genome = selected.genome.clone();
+            let evaluation = selected.evaluation.clone();
+            let genome_id = selected.genome_id;
+            let lineage = replay_lineage_response(&report.lineage, genome_id);
+            let archive = Some(replay_archive_response(&report.archive, selected.cell));
+            let history = report.history;
+            (
+                genome,
+                evaluation,
+                Some(genome_id),
+                request.generations,
+                request.population_size,
+                history,
+                lineage,
+                archive,
+            )
+        }
+    };
     let frames = capture_replay(&genome, request.task, request.frames, request.dt);
     let response = ReplayResponse {
+        genome_id,
         controller: genome.controller.as_str(),
         task: task_name(request.task),
         seed: request.seed,
@@ -478,6 +509,7 @@ fn replay_json(request: ReplayRequest) -> String {
                 occupied_cells: generation.occupied_cells,
             })
             .collect(),
+        lineage,
         archive,
         dt: request.dt,
         body: genome
@@ -528,6 +560,10 @@ fn replay_archive_response(
             .elites()
             .map(|elite| ReplayArchiveCellResponse {
                 cell: [elite.cell.0, elite.cell.1],
+                genome_id: elite.genome_id,
+                parent_id: elite.parent_id,
+                generation: elite.generation,
+                mutation_summary: elite.mutation_summary.clone(),
                 fitness: elite.evaluation.fitness,
                 stable_distance: elite.evaluation.metrics.stable_distance,
                 body_count: elite.evaluation.metrics.body_count,
@@ -535,6 +571,37 @@ fn replay_archive_response(
             })
             .collect(),
     }
+}
+
+fn replay_lineage_response(
+    lineage: &[crate::evolution::LineageRecord],
+    selected_genome_id: u64,
+) -> Vec<ReplayLineageResponse> {
+    let mut chain = Vec::new();
+    let mut seen = HashSet::new();
+    let mut current_id = Some(selected_genome_id);
+
+    while let Some(genome_id) = current_id {
+        if !seen.insert(genome_id) {
+            break;
+        }
+        let Some(record) = lineage.iter().find(|record| record.genome_id == genome_id) else {
+            break;
+        };
+        chain.push(ReplayLineageResponse {
+            genome_id: record.genome_id,
+            parent_id: record.parent_id,
+            generation: record.generation,
+            controller: record.controller.as_str(),
+            body_count: record.body_count,
+            actuator_count: record.actuator_count,
+            mutation_summary: record.mutation_summary.clone(),
+        });
+        current_id = record.parent_id;
+    }
+
+    chain.reverse();
+    chain
 }
 
 fn axis_name(axis: crate::qd::Axis) -> &'static str {
@@ -592,10 +659,13 @@ fn url_decode(value: &str) -> String {
             b'%' => {
                 let first = chars.next();
                 let second = chars.next();
-                if let (Some(first), Some(second)) = (first, second)
-                    && let Ok(hex) = std::str::from_utf8(&[first, second])
-                    && let Ok(decoded) = u8::from_str_radix(hex, 16)
-                {
+                let decoded = first.zip(second).and_then(|(first, second)| {
+                    let encoded = [first, second];
+                    std::str::from_utf8(&encoded)
+                        .ok()
+                        .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+                });
+                if let Some(decoded) = decoded {
                     output.push(decoded as char);
                 }
             }
@@ -670,6 +740,41 @@ mod tests {
                 .is_some_and(|cells| !cells.is_empty())
         );
         assert!(value["archive"]["selected_cell"].is_array());
+    }
+
+    #[test]
+    fn evolved_replay_exposes_truthful_selected_lineage() {
+        let json = replay_json(ReplayRequest {
+            mode: ReplayMode::Evolved,
+            seed: 71,
+            generations: 3,
+            population_size: 8,
+            evaluation_steps: 20,
+            frames: 1,
+            ..ReplayRequest::default()
+        });
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("replay should serialize as JSON");
+        let genome_id = value["genome_id"]
+            .as_u64()
+            .expect("evolved replay should identify the selected genome");
+        let lineage = value["lineage"]
+            .as_array()
+            .expect("evolved replay should include a lineage chain");
+
+        assert!(!lineage.is_empty());
+        assert_eq!(
+            lineage.last().unwrap()["genome_id"].as_u64(),
+            Some(genome_id)
+        );
+        assert!(lineage.last().unwrap()["mutation_summary"].is_string());
+        assert!(
+            value["archive"]["cells"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|cell| cell["genome_id"].is_u64() && cell["generation"].is_u64())
+        );
     }
 
     #[test]

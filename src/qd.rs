@@ -1,8 +1,9 @@
 use crate::fitness::{Evaluation, Metrics};
 use crate::genome::Genome;
 use crate::rng::Rng;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Axis {
     Distance,
     StableDistance,
@@ -39,14 +40,18 @@ impl Axis {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Elite {
     pub genome: Genome,
     pub evaluation: Evaluation,
     pub cell: (usize, usize),
+    pub genome_id: u64,
+    pub parent_id: Option<u64>,
+    pub generation: usize,
+    pub mutation_summary: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Archive {
     pub x_axis: Axis,
     pub y_axis: Axis,
@@ -69,6 +74,18 @@ impl Archive {
     }
 
     pub fn insert(&mut self, genome: Genome, evaluation: Evaluation) -> bool {
+        self.insert_tracked(genome, evaluation, 0, None, 0, "untracked".to_string())
+    }
+
+    pub fn insert_tracked(
+        &mut self,
+        genome: Genome,
+        evaluation: Evaluation,
+        genome_id: u64,
+        parent_id: Option<u64>,
+        generation: usize,
+        mutation_summary: String,
+    ) -> bool {
         let cell = self.cell_for(&evaluation.metrics);
         let index = self.index(cell);
         let should_replace = self.cells[index]
@@ -81,6 +98,10 @@ impl Archive {
                 genome,
                 evaluation,
                 cell,
+                genome_id,
+                parent_id,
+                generation,
+                mutation_summary,
             });
         }
 
@@ -117,10 +138,12 @@ impl Archive {
     }
 
     pub fn sample_parent<'a>(&'a self, rng: &mut Rng) -> Option<&'a Genome> {
+        self.sample_elite(rng).map(|elite| &elite.genome)
+    }
+
+    pub fn sample_elite<'a>(&'a self, rng: &mut Rng) -> Option<&'a Elite> {
         let elites: Vec<&Elite> = self.elites().collect();
-        elites
-            .get(rng.range_usize(elites.len()))
-            .map(|elite| &elite.genome)
+        elites.get(rng.range_usize(elites.len())).copied()
     }
 
     pub fn cell_for(&self, metrics: &Metrics) -> (usize, usize) {
