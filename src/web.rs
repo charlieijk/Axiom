@@ -551,10 +551,10 @@ fn replay_archive_response(
     selected_cell: (usize, usize),
 ) -> ReplayArchiveResponse {
     ReplayArchiveResponse {
-        x_axis: axis_name(archive.x_axis),
-        y_axis: axis_name(archive.y_axis),
-        width: archive.width,
-        height: archive.height,
+        x_axis: archive.x_axis.label(),
+        y_axis: archive.y_axis.label(),
+        width: archive.width(),
+        height: archive.height(),
         selected_cell: [selected_cell.0, selected_cell.1],
         cells: archive
             .elites()
@@ -602,18 +602,6 @@ fn replay_lineage_response(
 
     chain.reverse();
     chain
-}
-
-fn axis_name(axis: crate::qd::Axis) -> &'static str {
-    match axis {
-        crate::qd::Axis::Distance => "distance",
-        crate::qd::Axis::StableDistance => "stable distance",
-        crate::qd::Axis::JumpHeight => "jump height",
-        crate::qd::Axis::Uprightness => "uprightness",
-        crate::qd::Axis::Stability => "stability",
-        crate::qd::Axis::BodyCount => "body count",
-        crate::qd::Axis::ActuatorCount => "actuator count",
-    }
 }
 
 fn parse_replay_mode(value: &str) -> Option<ReplayMode> {
