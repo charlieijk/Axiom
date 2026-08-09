@@ -11,13 +11,21 @@
 //! real machine is meant to be a diff of that file, never a code change.
 
 pub mod config;
+pub mod controller;
+pub mod evaluate;
 pub mod gait;
+pub mod perturb;
+pub mod search;
 pub mod servo;
 pub mod sim;
 pub mod trajectory;
 
 pub use config::RobotConfig;
+pub use controller::CpgGenome;
+pub use evaluate::{EnsembleScore, Outcome, evaluate, evaluate_ensemble};
 pub use gait::{Gait, sine_gait};
+pub use perturb::{Perturbation, Spread};
+pub use search::{FieldElite, HoldoutReport, SearchConfig, SearchReport, holdout, run_search};
 pub use servo::Servo;
 pub use sim::{ACTUATOR_COUNT, FieldSim, LEG_COUNT, Sample};
 pub use trajectory::{Trajectory, TrajectorySummary};

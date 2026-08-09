@@ -86,6 +86,42 @@ instead, and keeps the sharp exact comparison for two runs from one binary.
 Every command prints an `UNCALIBRATED` warning first. The bundled parameters
 describe a robot nobody has built; the model is only as honest as `robot.toml`.
 
+### 6. Evolve a repertoire
+
+```sh
+cargo run --release -p axiom-field -- evolve --seed 1 --out archive.json
+```
+
+```
+reference:  trot walks 0.0669 m/s on these worlds (fell in 0 of 4)
+archive:    43 of 96 cells (44.8% coverage)
+best:       fitness 0.8367 m, speed 0.1175 m/s, cell (9, 0)
+            worst world 0.6835 m, fell in 0 of 4 worlds
+            +76% speed against the reference trot
+```
+
+Every genome is scored across four randomized worlds, and the hand-tuned trot
+is scored on the same four — so the +76% is a measurement, not a claim. Note
+the trot itself drops from 0.094 m/s in the nominal world to 0.067 m/s under
+randomization: the reference gait is more brittle than the nominal number
+suggests, which is the whole reason for scoring across an ensemble.
+
+### 7. Check it on worlds it never trained on
+
+```sh
+cargo run --release -p axiom-field -- holdout archive.json --worlds 6
+```
+
+```
+robust:     39 stood in all 6 unseen worlds (91%)
+retained:   90% of training fitness on unseen worlds
+```
+
+This is the closest a software-only stage gets to a transfer test. It is a
+proxy, not a measurement: it tests robustness to the perturbations this
+simulator knows how to apply, which is not the same as robustness to being
+real.
+
 ## Proof gate
 
 ```sh
