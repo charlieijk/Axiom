@@ -57,5 +57,8 @@ jobs:
       - name: Set up Rust 1.85
         uses: dtolnay/rust-toolchain@1.85
 
+      # The MSRV promise covers the publishable `axiom` library only. The
+      # `axiom-field` lab crate is `publish = false` and depends on rapier3d,
+      # whose own floor (nalgebra 1.87) is above ours.
       - name: Test minimum supported Rust
-        run: cargo test --workspace --locked
+        run: cargo test -p axiom --locked

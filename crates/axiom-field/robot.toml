@@ -1,0 +1,67 @@
+# Nominal parameters for an 8-DOF hobby-servo quadruped.
+#
+# NOTHING HERE HAS BEEN MEASURED. Every value is a vendor figure or an
+# estimate, and the simulator is only as honest as this file. When a physical
+# robot exists, replace these numbers with measurements and set
+# `meta.calibrated = true`. Calibration is meant to be a diff of this file,
+# never a code change.
+
+[meta]
+name = "nominal-mg90s-quadruped"
+# Flip to true only when every value below came off real hardware.
+calibrated = false
+provenance = "vendor datasheets and estimates; no physical measurement"
+
+[body]
+# Chassis modelled as a solid box. Mass includes battery, MCU, and driver board.
+length_m = 0.160
+width_m = 0.100
+height_m = 0.040
+mass_kg = 0.300
+# Hips inset from the chassis corners as a fraction of half-length/half-width.
+hip_inset = 0.85
+
+[leg]
+# Two links per leg: hip -> upper (thigh), knee -> lower (shank + foot).
+upper_length_m = 0.050
+upper_mass_kg = 0.020
+lower_length_m = 0.060
+lower_mass_kg = 0.015
+link_radius_m = 0.008
+
+[stance]
+# The neutral standing pose, and the centre of each servo's travel.
+# Straight-down legs are a singular configuration: the chassis is an inverted
+# pendulum over the hinges and collapses under any perturbation. Real hobby
+# quadrupeds stand crouched, so the model does too. A positive hip angle swings
+# the leg forward; a negative knee angle folds the shank back under the robot.
+hip_deg = 25.0
+knee_deg = -50.0
+
+[servo]
+# MG90S class. The no-load spec is 0.10 s/60 deg (600 deg/s); halved here as a
+# loaded estimate. Slew rate is the single highest-value fidelity parameter in
+# this file: it is what makes a simulated servo behave like a real one.
+max_rate_deg_per_s = 300.0
+min_angle_deg = -75.0
+max_angle_deg = 75.0
+# Stall torque is ~0.20 N*m at 5 V; derated for continuous use.
+max_torque_nm = 20.0
+# Internal position-loop gains of the servo, not of the controller.
+stiffness = 200.0
+damping = 0.35
+
+[contact]
+# Rubber-ish feet on a hard floor.
+friction = 0.9
+restitution = 0.0
+
+[sim]
+# Control runs at the rate the firmware will run at. Physics integrates finer.
+control_hz = 20.0
+physics_substeps = 10
+gravity_m_s2 = 9.81
+# How far above its own standing height the robot is released. The standing
+# height is derived from the stance and link geometry rather than hardcoded, so
+# changing a leg length cannot silently spawn the robot inside the floor.
+spawn_clearance_m = 0.005
