@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="axiom icon" style="color:#c9f24b">
+  <rect width="64" height="64" rx="14" fill="#10110e"/>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#e9f9a7" stroke-opacity=".16" stroke-width="2"/>
+  <g color="#c9f24b">
+    <path d="M32 11 53 49H11L32 11Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="32" cy="11" r="5" fill="currentColor"/><circle cx="11" cy="49" r="5" fill="currentColor"/><circle cx="53" cy="49" r="5" fill="currentColor"/>
+    <path d="M32 27v14M25 34h14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>
