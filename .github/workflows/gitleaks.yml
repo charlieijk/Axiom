@@ -29,5 +29,6 @@ jobs:
 
       - name: Scan git history for secrets
         # --redact keeps any real secret out of the CI log, which is itself a
-        # disclosure surface. Known false positives live in .gitleaksignore.
+        # disclosure surface. If a false positive ever needs suppressing, add
+        # a .gitleaksignore file (none is needed today — history scans clean).
         run: gitleaks git --no-banner --redact
