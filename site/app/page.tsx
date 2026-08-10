@@ -4,59 +4,77 @@
 
 import { useState } from "react";
 
-const views = [
+const experiments = [
   { title: "Creature Lab", body: "Run a compact creature simulation and watch a genome become movement instead of a row of opaque parameters." },
   { title: "Archive Map", body: "Browse occupied behavioral niches, compare elites, and see which experiments widened the search frontier." },
   { title: "Lineage", body: "Follow ancestry, checkpoints, and genome differences across the experiments that produced an evolved stride." }
 ];
 
+// Deterministic elite placement for the archive-grid illustration.
+const NICHES = 96;
+const elites = new Set([3, 9, 14, 22, 27, 31, 38, 44, 45, 52, 58, 61, 67, 70, 76, 83, 89, 94]);
+
 export default function Home() {
   const [active, setActive] = useState(0);
-  const selected = views[active];
+  const selected = experiments[active];
 
   return (
-    <main className="site" style={{ "--accent": "#c9f24b", "--soft": "#e9f9a7" } as React.CSSProperties}>
-      <header className="topbar">
-        <div className="brand"><i>AX</i>Axiom</div>
-        <div className="status">Beta 1.0 · Deterministic simulation</div>
+    <main className="journal">
+      <header className="masthead">
+        <div className="brand"><span className="seal">AX</span>Axiom</div>
+        <p className="edition">Field Journal · Beta 1.0 · Deterministic simulation</p>
       </header>
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="kicker">EMBODIED EVOLUTION / MAP-ELITES</p>
+
+      <section className="folio">
+        <div className="folio-copy">
+          <p className="entry-no">Entry 001 — Embodied evolution / MAP-Elites</p>
           <h1>Evolution you can interrogate.</h1>
-          <p className="summary">An embodied evolution laboratory where morphology, controllers, fitness, and diversity search become visible through creature replays and an inspectable archive.</p>
-          <div className="actions"><a href="#experience">Explore the product ↘</a><a href="#connection">Connected project</a></div>
-          <div className="metrics">
-            <div className="metric"><strong>2D + 3D</strong><span>Replay surfaces</span></div>
-            <div className="metric"><strong>MAP-ELITES</strong><span>Diversity archive</span></div>
-            <div className="metric"><strong>RUST</strong><span>Authoritative core</span></div>
-          </div>
+          <p className="abstract">An embodied evolution laboratory where morphology, controllers, fitness, and diversity search become visible through creature replays and an inspectable archive.</p>
+          <div className="actions"><a href="#experiments">Open the experiment log ↓</a><a href="#provenance">Provenance</a></div>
+          <dl className="observations">
+            <div><dt>2D + 3D</dt><dd>Replay surfaces</dd></div>
+            <div><dt>MAP-Elites</dt><dd>Diversity archive</dd></div>
+            <div><dt>Rust</dt><dd>Authoritative core</dd></div>
+          </dl>
         </div>
-        <div className="product-window" id="experience">
-          <div className="window-bar"><i/><i/><i/><b>axiom / product surface</b></div>
-          <div className="window-body">
-            <aside className="rail"><i/><i/><i/><i/></aside>
-            <div className="workspace">
-              <div className="workspace-head"><span>Current workspace</span><b>Deterministic simulation</b></div>
-              <div className="visual" data-kind="world" aria-hidden="true"><i className="orb" /><i className="orb" /><i className="orb" /><i className="orb" /><b className="beam" /><b className="beam" /><b className="beam" /></div>
-              <div className="readout" aria-live="polite"><small>0{active + 1} / ACTIVE VIEW</small><h2>{selected.title}</h2><p>{selected.body}</p></div>
-            </div>
+        <figure className="archive-plate" aria-label="Illustration of the MAP-Elites behavioral archive">
+          <figcaption>Fig. 1 — Occupied behavioral niches</figcaption>
+          <div className="archive-grid" aria-hidden="true">
+            {Array.from({ length: NICHES }, (_, i) => <i key={i} className={elites.has(i) ? "elite" : ""} />)}
           </div>
-          <div className="tabs" role="tablist" aria-label="Axiom product views">
-            {views.map((view,index)=><button key={view.title} role="tab" aria-selected={active===index} className={active===index?"active":""} onClick={()=>setActive(index)}>{String(index+1).padStart(2,"0")} / {view.title}</button>)}
+          <div className="axes"><span>← behavior descriptor 1 →</span><span>← behavior descriptor 2 →</span></div>
+        </figure>
+      </section>
+
+      <section className="log" id="experiments">
+        <p className="entry-no">Entries 002–004 — The experiment log</p>
+        <h2>Three instruments. One archive.</h2>
+        <div className="log-split">
+          <div className="log-index" role="tablist" aria-label="Axiom experiment log">
+            {experiments.map((exp, index) => (
+              <button key={exp.title} role="tab" aria-selected={active === index} className={active === index ? "active" : ""} onClick={() => setActive(index)}>
+                <span>{String(index + 2).padStart(3, "0")}</span>{exp.title}
+              </button>
+            ))}
           </div>
+          <article className="log-plate" aria-live="polite">
+            <p className="entry-no">Entry {String(active + 2).padStart(3, "0")} — active instrument</p>
+            <h3>{selected.title}</h3>
+            <p>{selected.body}</p>
+          </article>
         </div>
       </section>
-      <section className="connection" id="connection">
-        <div className="connection-grid">
-          <div className="connection-copy">
-            <p className="kicker">CONNECTED ORIGINAL PROJECT</p>
-            <h2>This Site has a real source of truth.</h2>
-            <p>The presentation above is paired with the canonical project boundary below. Open the real live environment when one exists, inspect the source snapshot, or use the documented local launch path for backend and native capabilities.</p>
-            <div className="connection-links"><a href="https://github.com/charlieijk/Axiom" target="_blank" rel="noreferrer">Open source project ↗</a></div>
-            <figure className="original-proof"><img src="/original-interface.jpg" alt="Original axiom project interface or design proof" loading="lazy" /><figcaption>Original project interface / design proof</figcaption></figure>
+
+      <section className="provenance" id="provenance">
+        <p className="entry-no">Appendix A — Provenance</p>
+        <h2>This Site has a real source of truth.</h2>
+        <div className="provenance-grid">
+          <div>
+            <p className="note">The presentation above is paired with the canonical project boundary below. Open the real live environment when one exists, inspect the source snapshot, or use the documented local launch path for backend and native capabilities.</p>
+            <div className="links"><a href="https://github.com/charlieijk/Axiom" target="_blank" rel="noreferrer">Open source project ↗</a></div>
+            <figure className="plate-photo"><img src="/original-interface.jpg" alt="Original axiom project interface or design proof" loading="lazy" /><figcaption>Plate I — Original project interface</figcaption></figure>
           </div>
-          <dl className="connection-record">
+          <dl className="specimen-label">
             <div><dt>Canonical source</dt><dd>https://github.com/charlieijk/Axiom</dd></div>
             <div><dt>Connected snapshot</dt><dd>main · 2a375cc3</dd></div>
             <div><dt>Original frontend</dt><dd>Rust simulation + 2D/3D browser viewer</dd></div>
@@ -65,16 +83,12 @@ export default function Home() {
           </dl>
         </div>
       </section>
-      <section className="manifest" id="principles">
-        <p className="kicker">PRODUCT SURFACE / CURRENT BOUNDARY</p>
-        <h2>Three views. One coherent operating model.</h2>
-        <div className="manifest-grid">
-          <article><span>01</span><h3>Creature Lab</h3><p>Run a compact creature simulation and watch a genome become movement instead of a row of opaque parameters.</p></article>
-          <article><span>02</span><h3>Archive Map</h3><p>Browse occupied behavioral niches, compare elites, and see which experiments widened the search frontier.</p></article>
-          <article><span>03</span><h3>Lineage</h3><p>Follow ancestry, checkpoints, and genome differences across the experiments that produced an evolved stride.</p></article>
-        </div>
+
+      <section className="colophon">
+        <b>Sites edition</b>
+        <p>This dedicated website presents the current frontend safely. Native capabilities, local credentials, private connectors, and production mutations remain outside the browser boundary.</p>
       </section>
-      <section className="boundary"><b>SITES EDITION</b><p>This dedicated website presents the current frontend safely. Native capabilities, local credentials, private connectors, and production mutations remain outside the browser boundary.</p></section>
+
       <footer><span>Charlie Cullen / Developer workspace</span><b>Axiom</b><span>Beta 1.0 · Sites edition</span></footer>
     </main>
   );
