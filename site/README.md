@@ -5,7 +5,9 @@ Dedicated public product website for Axiom, released under the shared **Beta 1.0
 ## Product boundary
 
 - `app/` is the focused, read-only product presentation.
-- The connected-project record points to the canonical main-product repository and local launch path.
+- The whole site is a static marketing page with **no live backend connection**:
+  the project record (repository link, snapshot, launch path) is descriptive
+  metadata about the main product, not a runtime integration.
 - Simulation authority, credentials, private connectors, persistence, and production mutations stay in the main product.
 - `.openai/hosting.json` contains the Sites hosting metadata copied into production builds.
 
