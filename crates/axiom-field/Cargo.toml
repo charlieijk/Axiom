@@ -12,4 +12,4 @@ axiom = { path = "../.." }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.9"
-rapier3d = { version = "0.32", features = ["enhanced-determinism"] }
+rapier3d = { version = "0.34", features = ["enhanced-determinism"] }
