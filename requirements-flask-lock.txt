@@ -23,7 +23,7 @@ markupsafe==3.0.3
     #   flask
     #   jinja2
     #   werkzeug
-requests==2.32.5
+requests==2.34.2
     # via -r requirements-flask.txt
 urllib3==2.7.0
     # via requests
