@@ -33,9 +33,14 @@ jobs:
         run: cargo test --workspace
 
       - name: JavaScript syntax
+        # The graphics3d files are ES modules; parse everything as module
+        # syntax via stdin so the check works on Node versions without
+        # automatic module detection.
         run: |
-          node --check web/app.js
-          node --check web/graphics3d.js
+          for file in web/*.js; do
+            echo "checking ${file}"
+            node --input-type=module --check < "${file}"
+          done
 
       - name: Animation smoke test
         run: cargo run -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18

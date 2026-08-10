@@ -17,6 +17,9 @@ const APP_JS: &str = include_str!("../web/app.js");
 const GRAPHICS_HTML: &str = include_str!("../web/graphics3d.html");
 const GRAPHICS_CSS: &str = include_str!("../web/graphics3d.css");
 const GRAPHICS_JS: &str = include_str!("../web/graphics3d.js");
+const GRAPHICS_STATE_JS: &str = include_str!("../web/graphics3d-state.js");
+const GRAPHICS_SCENE_JS: &str = include_str!("../web/graphics3d-scene.js");
+const GRAPHICS_JOURNAL_JS: &str = include_str!("../web/graphics3d-journal.js");
 
 #[derive(Clone, Debug)]
 pub struct GuiConfig {
@@ -89,6 +92,17 @@ pub fn gui_smoke_check() -> io::Result<()> {
             "3D GUI assets did not include expected scene markers",
         ));
     }
+    let graphics_state_js = response_body("/graphics3d-state.js");
+    let graphics_scene_js = response_body("/graphics3d-scene.js");
+    let graphics_journal_js = response_body("/graphics3d-journal.js");
+    if !graphics_state_js.contains("replayRequest")
+        || !graphics_scene_js.contains("createCreatureRenderer")
+        || !graphics_journal_js.contains("renderFieldJournal")
+    {
+        return Err(io::Error::other(
+            "3D GUI modules did not include expected module markers",
+        ));
+    }
     if !replay.contains("\"frames\"") || !replay.contains("\"bodies\"") {
         return Err(io::Error::other(
             "replay JSON did not include frame/body data",
@@ -136,7 +150,10 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
             "application/javascript; charset=utf-8",
             response_body(path),
         ),
-        "/graphics3d.js" => (
+        "/graphics3d.js"
+        | "/graphics3d-state.js"
+        | "/graphics3d-scene.js"
+        | "/graphics3d-journal.js" => (
             "200 OK",
             "application/javascript; charset=utf-8",
             response_body(path),
@@ -164,6 +181,9 @@ fn response_body(path: &str) -> String {
         "/app.js" => APP_JS.to_string(),
         "/graphics3d.css" => GRAPHICS_CSS.to_string(),
         "/graphics3d.js" => GRAPHICS_JS.to_string(),
+        "/graphics3d-state.js" => GRAPHICS_STATE_JS.to_string(),
+        "/graphics3d-scene.js" => GRAPHICS_SCENE_JS.to_string(),
+        "/graphics3d-journal.js" => GRAPHICS_JOURNAL_JS.to_string(),
         _ => String::new(),
     }
 }
