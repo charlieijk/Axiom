@@ -637,6 +637,27 @@ mod tests {
     }
 
     #[test]
+    fn malformed_query_values_fall_back_to_interactive_defaults() {
+        // Parsing is deliberately lenient: unparseable values keep their
+        // defaults, out-of-range values clamp, and unknown keys are ignored,
+        // so a malformed query never produces an error — only the evolved
+        // budget check (below) can reject a request.
+        let defaults = ReplayRequest::default();
+        let request = parse_replay_request(
+            "mode=warp&seed=abc&frames=&generations=minus-three&population=lots&evaluation_steps=9999&cell_x=west&unknown=1",
+        );
+
+        assert_eq!(request.mode, defaults.mode);
+        assert_eq!(request.seed, defaults.seed);
+        assert_eq!(request.frames, defaults.frames);
+        assert_eq!(request.generations, defaults.generations);
+        assert_eq!(request.population_size, defaults.population_size);
+        assert_eq!(request.evaluation_steps, 500, "9999 parses, then clamps");
+        assert_eq!(request.archive_cell_x, None);
+        assert!(validate_replay_request(&request).is_ok());
+    }
+
+    #[test]
     fn oversized_evolved_replay_returns_bad_request() {
         let request =
             parse_replay_request("mode=evolved&generations=40&population=96&evaluation_steps=500");
