@@ -21,7 +21,10 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Format
         run: cargo fmt --all -- --check
@@ -29,8 +32,12 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test --workspace
+      # Runs the workspace suite under instrumentation, so this covers the
+      # `cargo test --workspace` gate as well as measuring it. The floor is a
+      # ratchet set just under the measured 84% line coverage, not a target:
+      # it is here to catch a regression, so raise it when coverage rises.
+      - name: Test with coverage
+        run: cargo llvm-cov --workspace --fail-under-lines 80
 
       - name: JavaScript syntax
         # The graphics3d files are ES modules; parse everything as module
@@ -55,6 +62,26 @@ jobs:
 
       - name: Package dry run
         run: cargo package --locked
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      # Fails on a known vulnerability in the dependency tree. Unmaintained-crate
+      # warnings do not fail the build; today the only one is RUSTSEC-2024-0436
+      # (paste), which arrives transitively through the physics stack.
+      - name: Audit dependencies
+        run: cargo audit
 
   msrv:
     name: Rust 1.85 MSRV
