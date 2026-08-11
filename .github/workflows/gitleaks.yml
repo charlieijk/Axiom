@@ -1,7 +1,10 @@
 name: gitleaks
 
 on:
+  # Branch commits are covered by the pull_request trigger below; listening to
+  # an unfiltered push as well ran every one of them twice.
   push:
+    branches: [main]
   pull_request:
 
 permissions:
