@@ -29,6 +29,10 @@ cargo run -- animate --checkpoint checkpoints/run.json --frames 160 --fps 20
 cargo run --example rough_terrain_benchmark
 ```
 
+`cargo run -- gui` binds `127.0.0.1:8787` and is unauthenticated by intent —
+a single-user local tool. Do not expose it beyond the host; see
+[SECURITY.md](SECURITY.md) for the trust boundary.
+
 ## Architecture
 
 - `genome.rs` encodes body morphology and neural genomes.
