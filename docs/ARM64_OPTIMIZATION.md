@@ -65,9 +65,10 @@ The reusable buffer APIs also have focused wrapper-versus-workspace equality tes
 
 The production optimization is portable buffer reuse measured and validated on Arm64. It does **not** claim a hand-written NEON path. The Field Lab's deterministic Rapier configuration is separate and is not described as SIMD-accelerated.
 
-## Reproduce
+## Reproduce the optimized measurement
 
-Run uninstrumented timing and allocation counting as separate release binaries:
+Run uninstrumented timing and allocation counting as separate release binaries
+from the optimized challenge source:
 
 ```sh
 cargo run --release --locked --example arm64_optimization_benchmark -- --full
@@ -77,7 +78,14 @@ cargo run --release --locked --features allocation-counting \
 
 The benchmark refuses authoritative execution on non-Arm64 hosts unless `--allow-non-arm64` is explicitly supplied. Allocation-counting builds refuse timing mode because even disabled allocator instrumentation perturbs an allocation-heavy hot path.
 
-The pre-optimization binary was rebuilt in an isolated `git archive` of commit `71d3897d`; only the current benchmark example and empty `allocation-counting` feature declaration were added to that tree. Source and binary hashes are recorded in the raw artifacts.
+The pre-optimization binary was rebuilt in an isolated `git archive` of commit
+`71d3897d`; only the current benchmark example and empty `allocation-counting`
+feature declaration were added to that tree. Source and binary hashes are
+recorded in the raw artifacts and checked by `tests/arm64_evidence.rs`. The
+repository does not currently package that historical archive procedure as a
+one-command baseline rebuild, so the copy-paste commands above reproduce the
+optimized measurement while the checked-in baseline remains a hash-bound raw
+artifact.
 
 ## Arm64 judge quick check
 
