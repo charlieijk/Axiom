@@ -29,7 +29,7 @@ import {
   setLoadingState,
 } from "./graphics3d-journal.js";
 
-const THREE_MODULE_URL = "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
+const THREE_MODULE_URL = "/vendor/three.module.min.js";
 
 import(THREE_MODULE_URL)
   .then((THREE) => start(THREE))

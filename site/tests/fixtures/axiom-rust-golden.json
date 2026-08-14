@@ -1,0 +1,44 @@
+{
+  "source": "cargo run -- gui; GET /api/replay?mode=minimal&controller=cpg&task=rough&seed=19&frames=220&evaluation_steps=220",
+  "config": {
+    "controller": "cpg",
+    "terrain": "rough",
+    "seed": 19,
+    "steps": 220,
+    "dt": 0.05
+  },
+  "metrics": {
+    "fitness": 8.217861,
+    "distance": 0,
+    "stableDistance": 0,
+    "stability": 0.5945516
+  },
+  "frames": [
+    {
+      "index": 0,
+      "time": 0,
+      "root": [0, 0.68],
+      "tilt": 0,
+      "bodies": [
+        [0, 0.68],
+        [-0.82500005, 0.68],
+        [0.82500005, 0.68],
+        [0, 1.1800001],
+        [0, 0.13]
+      ]
+    },
+    {
+      "index": 220,
+      "time": 11.000024,
+      "root": [-8.933274, 0.25091323],
+      "tilt": -0.79984087,
+      "bodies": [
+        [-8.933274, 0.25091323],
+        [-8.447867, 0.9180001],
+        [-9.418681, -0.41617367],
+        [-8.528979, -0.043272972],
+        [-9.377998, 0.5745181]
+      ]
+    }
+  ]
+}
