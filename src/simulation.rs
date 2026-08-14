@@ -135,6 +135,22 @@ impl Simulation {
         }
     }
 
+    pub(crate) fn snapshot_into(&self, snapshot: &mut Snapshot) {
+        let creature = self
+            .creature
+            .as_ref()
+            .expect("spawn_creature must be called before snapshot");
+        snapshot.time = self.time;
+        snapshot.root_position = creature.root_position;
+        snapshot.root_velocity = creature.root_velocity;
+        snapshot.tilt = creature.tilt;
+        snapshot.angular_velocity = creature.angular_velocity;
+        snapshot.energy_spent = creature.energy_spent;
+        snapshot.terrain_height = self.world.terrain_height(creature.root_position.x);
+        snapshot.terrain_slope = self.world.terrain_slope(creature.root_position.x);
+        snapshot.joints.clone_from(&creature.joints);
+    }
+
     pub fn step(&mut self, genome: &Genome, actions: &[f32], dt: f32) {
         let creature = self
             .creature
@@ -277,5 +293,51 @@ mod tests {
         let snapshot = sim.snapshot();
         assert!(snapshot.root_position.x > 0.0);
         assert!(snapshot.energy_spent > 0.0);
+    }
+
+    #[test]
+    fn reusable_snapshot_is_identical_to_an_owned_snapshot() {
+        let mut rng = Rng::new(17);
+        let genome = Genome::minimal(ControllerKind::Cpg, &mut rng);
+        let mut sim = Simulation::new(World::rough());
+        sim.spawn_creature(&genome.body);
+        let mut reusable = sim.snapshot();
+
+        sim.step(&genome, &[0.25, -0.5, 0.75, -1.0], 0.05);
+        sim.snapshot_into(&mut reusable);
+        let owned = sim.snapshot();
+
+        assert_eq!(reusable.time.to_bits(), owned.time.to_bits());
+        assert_eq!(reusable.root_position, owned.root_position);
+        assert_eq!(reusable.root_velocity, owned.root_velocity);
+        assert_eq!(reusable.tilt.to_bits(), owned.tilt.to_bits());
+        assert_eq!(
+            reusable.angular_velocity.to_bits(),
+            owned.angular_velocity.to_bits()
+        );
+        assert_eq!(
+            reusable.energy_spent.to_bits(),
+            owned.energy_spent.to_bits()
+        );
+        assert_eq!(
+            reusable.terrain_height.to_bits(),
+            owned.terrain_height.to_bits()
+        );
+        assert_eq!(
+            reusable.terrain_slope.to_bits(),
+            owned.terrain_slope.to_bits()
+        );
+        assert_eq!(reusable.joints.len(), owned.joints.len());
+        for (actual, expected) in reusable.joints.iter().zip(&owned.joints) {
+            assert_eq!(actual.node_id, expected.node_id);
+            assert_eq!(actual.attachment, expected.attachment);
+            assert_eq!(actual.anchor.parent_anchor, expected.anchor.parent_anchor);
+            assert_eq!(actual.anchor.child_anchor, expected.anchor.child_anchor);
+            assert_eq!(actual.angle.to_bits(), expected.angle.to_bits());
+            assert_eq!(
+                actual.angular_velocity.to_bits(),
+                expected.angular_velocity.to_bits()
+            );
+        }
     }
 }

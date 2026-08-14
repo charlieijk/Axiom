@@ -18,6 +18,18 @@ pub struct CompiledNetwork {
     order: Vec<usize>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct NetworkWorkspace {
+    values: Vec<f32>,
+    outputs: Vec<f32>,
+}
+
+impl NetworkWorkspace {
+    pub(crate) fn into_outputs(self) -> Vec<f32> {
+        self.outputs
+    }
+}
+
 impl CompiledNetwork {
     pub fn compile(genome: &NeuralGenome) -> Self {
         let mut nodes: Vec<_> = genome
@@ -78,14 +90,33 @@ impl CompiledNetwork {
     }
 
     pub fn forward(&self, inputs: &[f32]) -> Vec<f32> {
-        let mut values = vec![0.0; self.nodes.len()];
+        let mut workspace = self.workspace();
+        self.forward_into(inputs, &mut workspace);
+        workspace.outputs
+    }
+
+    pub(crate) fn workspace(&self) -> NetworkWorkspace {
+        NetworkWorkspace {
+            values: vec![0.0; self.nodes.len()],
+            outputs: vec![0.0; self.output_slots.len()],
+        }
+    }
+
+    pub(crate) fn forward_into<'a>(
+        &self,
+        inputs: &[f32],
+        workspace: &'a mut NetworkWorkspace,
+    ) -> &'a mut [f32] {
+        workspace.values.resize(self.nodes.len(), 0.0);
+        workspace.values.fill(0.0);
+        workspace.outputs.resize(self.output_slots.len(), 0.0);
 
         for (slot_index, node_index) in self.input_slots.iter().copied().enumerate() {
-            values[node_index] = inputs.get(slot_index).copied().unwrap_or(0.0);
+            workspace.values[node_index] = inputs.get(slot_index).copied().unwrap_or(0.0);
         }
 
         for node_index in &self.bias_slots {
-            values[*node_index] = 1.0;
+            workspace.values[*node_index] = 1.0;
         }
 
         for node_index in &self.order {
@@ -94,17 +125,18 @@ impl CompiledNetwork {
                 NodeKind::Hidden | NodeKind::Output => {
                     let sum = self.incoming[*node_index]
                         .iter()
-                        .map(|(from, weight)| values[*from] * weight)
+                        .map(|(from, weight)| workspace.values[*from] * weight)
                         .sum::<f32>();
-                    values[*node_index] = sum.tanh();
+                    workspace.values[*node_index] = sum.tanh();
                 }
             }
         }
 
-        self.output_slots
-            .iter()
-            .map(|node_index| values[*node_index])
-            .collect()
+        for (output, node_index) in workspace.outputs.iter_mut().zip(&self.output_slots) {
+            *output = workspace.values[*node_index];
+        }
+
+        &mut workspace.outputs
     }
 }
 
@@ -206,5 +238,59 @@ mod tests {
         let output = network.forward(&[0.25, 0.5])[0];
         let expected = (0.25_f32 + 5.0 + 100.0).tanh();
         assert!((output - expected).abs() < 0.0001);
+    }
+
+    #[test]
+    fn reusable_workspace_is_bit_exact_with_the_public_forward_path() {
+        let genome = NeuralGenome {
+            input_count: 2,
+            output_count: 1,
+            nodes: vec![
+                NodeGene {
+                    id: 0,
+                    kind: NodeKind::Input,
+                },
+                NodeGene {
+                    id: 1,
+                    kind: NodeKind::Input,
+                },
+                NodeGene {
+                    id: 2,
+                    kind: NodeKind::Bias,
+                },
+                NodeGene {
+                    id: 3,
+                    kind: NodeKind::Output,
+                },
+            ],
+            connections: vec![
+                ConnectionGene {
+                    from: 0,
+                    to: 3,
+                    weight: 0.75,
+                    enabled: true,
+                },
+                ConnectionGene {
+                    from: 1,
+                    to: 3,
+                    weight: -0.5,
+                    enabled: true,
+                },
+                ConnectionGene {
+                    from: 2,
+                    to: 3,
+                    weight: 0.125,
+                    enabled: true,
+                },
+            ],
+        };
+        let network = CompiledNetwork::compile(&genome);
+        let expected = network.forward(&[0.25, 0.5]);
+        let mut workspace = network.workspace();
+
+        let first = network.forward_into(&[0.25, 0.5], &mut workspace);
+        assert_eq!(first, expected);
+        let second = network.forward_into(&[-0.25, 0.75], &mut workspace);
+        assert_eq!(second, network.forward(&[-0.25, 0.75]));
     }
 }

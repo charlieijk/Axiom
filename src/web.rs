@@ -20,6 +20,7 @@ const GRAPHICS_JS: &str = include_str!("../web/graphics3d.js");
 const GRAPHICS_STATE_JS: &str = include_str!("../web/graphics3d-state.js");
 const GRAPHICS_SCENE_JS: &str = include_str!("../web/graphics3d-scene.js");
 const GRAPHICS_JOURNAL_JS: &str = include_str!("../web/graphics3d-journal.js");
+const THREE_JS: &str = include_str!("../web/vendor/three.module.min.js");
 
 #[derive(Clone, Debug)]
 pub struct GuiConfig {
@@ -76,6 +77,7 @@ pub fn gui_smoke_check() -> io::Result<()> {
     let js = response_body("/app.js");
     let graphics = response_body("/3d");
     let graphics_js = response_body("/graphics3d.js");
+    let three_js = response_body("/vendor/three.module.min.js");
     let replay = replay_json(ReplayRequest {
         frames: 3,
         ..ReplayRequest::default()
@@ -87,7 +89,10 @@ pub fn gui_smoke_check() -> io::Result<()> {
             "GUI assets did not include expected UI markers",
         ));
     }
-    if !graphics.contains("graphics-canvas") || !graphics_js.contains("THREE_MODULE_URL") {
+    if !graphics.contains("graphics-canvas")
+        || !graphics_js.contains("/vendor/three.module.min.js")
+        || !three_js.contains("const t=\"165\"")
+    {
         return Err(io::Error::other(
             "3D GUI assets did not include expected scene markers",
         ));
@@ -158,6 +163,11 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
             "application/javascript; charset=utf-8",
             response_body(path),
         ),
+        "/vendor/three.module.min.js" => (
+            "200 OK",
+            "application/javascript; charset=utf-8",
+            response_body(path),
+        ),
         "/api/replay" => api_replay_response(query),
         _ => (
             "404 Not Found",
@@ -184,6 +194,7 @@ fn response_body(path: &str) -> String {
         "/graphics3d-state.js" => GRAPHICS_STATE_JS.to_string(),
         "/graphics3d-scene.js" => GRAPHICS_SCENE_JS.to_string(),
         "/graphics3d-journal.js" => GRAPHICS_JOURNAL_JS.to_string(),
+        "/vendor/three.module.min.js" => THREE_JS.to_string(),
         _ => String::new(),
     }
 }

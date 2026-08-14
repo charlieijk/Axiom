@@ -398,21 +398,11 @@ mod tests {
         let a = small_run(2024);
         let b = small_run(2024);
 
-        // Same seed must reproduce the whole observable outcome bit-for-bit:
-        // best fitness, the winning creature's behaviour metrics, and the
-        // shape of the quality-diversity archive.
-        assert_eq!(a.best_evaluation.fitness, b.best_evaluation.fitness);
-        assert_eq!(a.best_evaluation.steps, b.best_evaluation.steps);
-        assert_eq!(
-            a.best_evaluation.metrics.stable_distance,
-            b.best_evaluation.metrics.stable_distance
-        );
-        assert_eq!(
-            a.best_evaluation.metrics.body_count,
-            b.best_evaluation.metrics.body_count
-        );
-        assert_eq!(a.archive.occupied_count(), b.archive.occupied_count());
-        assert_eq!(a.archive.coverage(), b.archive.coverage());
+        // The complete report includes the champion and its metrics, every
+        // archive elite, generation history, and lineage. Comparing it
+        // directly prevents a deterministic-but-wrong optimization from
+        // hiding behind a few unchanged headline metrics.
+        assert_eq!(a, b);
     }
 
     #[test]

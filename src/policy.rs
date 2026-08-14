@@ -1,5 +1,5 @@
 use crate::genome::Genome;
-use crate::network::CompiledNetwork;
+use crate::network::{CompiledNetwork, NetworkWorkspace};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -45,6 +45,12 @@ pub struct Brain {
     network: CompiledNetwork,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct BrainWorkspace {
+    inputs: Vec<f32>,
+    network: NetworkWorkspace,
+}
+
 impl Brain {
     pub fn from_genome(genome: &Genome) -> Self {
         Self {
@@ -58,15 +64,35 @@ impl Brain {
     }
 
     pub fn think(&self, observations: &[f32], state: &mut BrainState) -> Vec<f32> {
-        let mut inputs = Vec::with_capacity(observations.len() + state.recurrent.len());
-        inputs.extend_from_slice(observations);
+        let mut workspace = self.workspace();
+        let _ = self.think_into(observations, state, &mut workspace);
+        workspace.network.into_outputs()
+    }
+
+    pub(crate) fn workspace(&self) -> BrainWorkspace {
+        BrainWorkspace {
+            inputs: Vec::with_capacity(self.network.input_count()),
+            network: self.network.workspace(),
+        }
+    }
+
+    pub(crate) fn think_into<'a>(
+        &self,
+        observations: &[f32],
+        state: &mut BrainState,
+        workspace: &'a mut BrainWorkspace,
+    ) -> &'a [f32] {
+        workspace.inputs.clear();
+        workspace.inputs.extend_from_slice(observations);
 
         if self.kind == ControllerKind::Recurrent {
-            inputs.extend_from_slice(&state.recurrent);
+            workspace.inputs.extend_from_slice(&state.recurrent);
         }
 
-        inputs.resize(self.network.input_count(), 0.0);
-        let mut outputs = self.network.forward(&inputs);
+        workspace.inputs.resize(self.network.input_count(), 0.0);
+        let outputs = self
+            .network
+            .forward_into(&workspace.inputs, &mut workspace.network);
 
         match self.kind {
             ControllerKind::FeedForward => {}
@@ -154,5 +180,36 @@ mod tests {
         let output = brain.think(&[0.0], &mut state);
 
         assert!((output[0] - 1.0_f32.tanh()).abs() < 0.0001);
+    }
+
+    #[test]
+    fn reusable_workspace_matches_public_think_for_every_controller() {
+        for controller in [
+            ControllerKind::FeedForward,
+            ControllerKind::Recurrent,
+            ControllerKind::Cpg,
+        ] {
+            let mut rng = Rng::new(41);
+            let genome = Genome::minimal(controller, &mut rng);
+            let brain = Brain::from_genome(&genome);
+            let observations = vec![0.125; sensor_count(&genome.body)];
+            let mut expected_state = brain.reset_state();
+            let mut actual_state = expected_state.clone();
+            let mut workspace = brain.workspace();
+
+            for _ in 0..8 {
+                let expected = brain.think(&observations, &mut expected_state);
+                let actual = brain
+                    .think_into(&observations, &mut actual_state, &mut workspace)
+                    .to_vec();
+
+                assert_eq!(actual, expected, "{controller:?} output diverged");
+                assert_eq!(actual_state.recurrent, expected_state.recurrent);
+                assert_eq!(
+                    actual_state.oscillator_phase.to_bits(),
+                    expected_state.oscillator_phase.to_bits()
+                );
+            }
+        }
     }
 }

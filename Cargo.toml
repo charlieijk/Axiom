@@ -20,14 +20,32 @@ include = [
     "/tests/**",
     "/Cargo.toml",
     "/Cargo.lock",
+    "/SECURITY.md",
     "/README.md",
     "/DEMO.md",
+    "/docs/ARM64_OPTIMIZATION.md",
+    "/docs/APPLE_SILICON.md",
+    "/docs/ARCHITECTURE.md",
+    "/docs/SUBMISSION_ASSETS.md",
+    "/docs/axiom-arm64-result.png",
+    "/docs/axiom-arm64-result.svg",
+    "/docs/axiom-archive-lab-gen12.jpg",
+    "/docs/axiom-archive-elite-cell-0-7.jpg",
+    "/docs/axiom-archive-lab-gen13.jpg",
+    "/docs/axiom-architecture.png",
+    "/docs/axiom-core-loop.png",
+    "/docs/axiom-core-loop.svg",
+    "/docs/submission-assets.sha256",
+    "/docs/benchmarks/**",
     "/LICENSE",
 ]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[features]
+allocation-counting = []
 
 [lib]
 path = "src/lib.rs"

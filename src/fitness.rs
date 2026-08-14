@@ -49,27 +49,25 @@ pub fn evaluate(genome: &Genome, task: TaskKind, steps: usize) -> Evaluation {
     simulation.spawn_creature(&genome.body);
     let brain = Brain::from_genome(genome);
     let mut brain_state = brain.reset_state();
+    let mut brain_workspace = brain.workspace();
+    let mut snapshot = simulation.snapshot();
+    let mut observations = Vec::with_capacity(sensor_count(&genome.body));
     let mut max_height = 0.0_f32;
     let mut upright_accumulator = 0.0_f32;
     let mut angular_control_accumulator = 0.0_f32;
 
-    for step in 0..steps {
-        if task == TaskKind::Recovery && step == 0 {
-            let _ = simulation.snapshot();
-        }
+    for _ in 0..steps {
+        observation_vector_into(&snapshot, &genome.body, &mut observations);
+        let actions = brain.think_into(&observations, &mut brain_state, &mut brain_workspace);
+        simulation.step(genome, actions, 0.05);
 
-        let snapshot = simulation.snapshot();
-        let observations = observation_vector(&snapshot, &genome.body);
-        let actions = brain.think(&observations, &mut brain_state);
-        simulation.step(genome, &actions, 0.05);
-
-        let next = simulation.snapshot();
-        max_height = max_height.max(next.root_position.y - next.terrain_height);
-        upright_accumulator += tilt_stability(next.tilt);
-        angular_control_accumulator += (1.0 - next.angular_velocity.abs() / 3.0).clamp(0.0, 1.0);
+        simulation.snapshot_into(&mut snapshot);
+        max_height = max_height.max(snapshot.root_position.y - snapshot.terrain_height);
+        upright_accumulator += tilt_stability(snapshot.tilt);
+        angular_control_accumulator +=
+            (1.0 - snapshot.angular_velocity.abs() / 3.0).clamp(0.0, 1.0);
     }
 
-    let snapshot = simulation.snapshot();
     let distance = snapshot.root_position.x.max(0.0);
     let uprightness = upright_accumulator / steps.max(1) as f32;
     let angular_control = angular_control_accumulator / steps.max(1) as f32;
@@ -119,6 +117,16 @@ fn tilt_stability(tilt: f32) -> f32 {
 
 pub fn observation_vector(snapshot: &Snapshot, body: &BodyGenome) -> Vec<f32> {
     let mut observations = Vec::with_capacity(sensor_count(body));
+    observation_vector_into(snapshot, body, &mut observations);
+    observations
+}
+
+pub(crate) fn observation_vector_into(
+    snapshot: &Snapshot,
+    body: &BodyGenome,
+    observations: &mut Vec<f32>,
+) {
+    observations.clear();
     observations.extend_from_slice(&[
         snapshot.time,
         snapshot.root_position.x,
@@ -150,7 +158,6 @@ pub fn observation_vector(snapshot: &Snapshot, body: &BodyGenome) -> Vec<f32> {
     }
 
     observations.resize(sensor_count(body), 0.0);
-    observations
 }
 
 #[cfg(test)]
@@ -163,7 +170,7 @@ mod tests {
         simulation::{JointAnchor, JointState, Simulation, Snapshot},
     };
 
-    use super::{TaskKind, observation_vector};
+    use super::{TaskKind, observation_vector, observation_vector_into};
 
     #[test]
     fn observation_vector_matches_genome_sensor_count() {
@@ -200,6 +207,22 @@ mod tests {
 
         assert_eq!(observations.len(), crate::genome::sensor_count(&body));
         assert_eq!(observations[12], 20.0);
+    }
+
+    #[test]
+    fn reusable_observation_buffer_matches_owned_observations() {
+        let mut rng = Rng::new(12);
+        let genome = Genome::minimal(ControllerKind::Cpg, &mut rng);
+        let mut simulation = Simulation::new(TaskKind::RoughTerrain.world());
+        simulation.spawn_creature(&genome.body);
+        simulation.step(&genome, &[0.25, -0.5, 0.75, -1.0], 0.05);
+        let snapshot = simulation.snapshot();
+        let expected = observation_vector(&snapshot, &genome.body);
+        let mut actual = vec![99.0; expected.len() + 8];
+
+        observation_vector_into(&snapshot, &genome.body, &mut actual);
+
+        assert_eq!(actual, expected);
     }
 
     fn test_joint(node_id: usize, attachment: Attachment, angle: f32) -> JointState {
