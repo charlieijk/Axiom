@@ -8,6 +8,10 @@ The current UI captures were taken from the Rust-backed `/3d` interface on
 August 13, 2026. Their integrity manifest is
 [submission-assets.sha256](submission-assets.sha256).
 
+Use [axiom-arm64-result.png](axiom-arm64-result.png) as the Devpost cover and
+thumbnail because its measured result remains legible at card size. Use the
+remaining items below as the gallery sequence.
+
 ## Screenshot sequence
 
 | Order | Asset | Caption | What it proves |

@@ -22,14 +22,14 @@ On an Apple M2 Arm64 host, the fixed 2,048,400-step workload changed from 13,000
 
 ### Significant challenge-period update
 
-Axiom existed before the challenge. Starting from public baseline commit [`71d3897d`](https://github.com/charlieijk/Axiom/commit/71d3897dc04f90a4903a14fd737af1ad680cef7c) on August 10, 2026, the challenge work added reusable rollout workspaces, an isolated Arm64 allocation harness, full-report equivalence gates, native Arm64 CI and release automation, judge documentation and assets, and presentation refinements. The baseline and optimized measurements use the same hardware, toolchain, lockfile, benchmark source, workload, and fixed seed.
+Axiom existed before the challenge. Starting from baseline commit [`71d3897d`](https://github.com/charlieijk/Axiom/commit/71d3897dc04f90a4903a14fd737af1ad680cef7c) on August 10, 2026, the challenge work added reusable rollout workspaces, an isolated Arm64 allocation harness, full-report equivalence gates, native Arm64 CI and release automation, judge documentation and assets, and presentation refinements. The baseline and optimized measurements use the same hardware, toolchain, lockfile, benchmark source, workload, and fixed seed.
 
 ## Why This Matters
 
 Axiom combines a material Arm64 optimization with a strict correctness contract and a working judge-facing experience:
 
-- **Technological implementation (40 points):** raw baseline and optimized JSON record exact source, binary, hardware, toolchain, and outcome hashes. Focused tests compare allocating and workspace APIs across feedforward, recurrent, and CPG controllers.
-- **User/developer experience (15 points):** judges can inspect a live 3D creature, select different MAP-Elites cells, inspect real lineage, advance evolution, and reproduce the evidence with copy-paste commands.
+- **Technological implementation (40 points):** raw baseline and optimized JSON record benchmark, lockfile, optimization-source, binary, hardware, toolchain, and outcome hashes. Focused tests compare allocating and workspace APIs across feedforward, recurrent, and CPG controllers.
+- **User/developer experience (15 points):** judges can inspect a live 3D creature, select different MAP-Elites cells, inspect real lineage, advance evolution, verify the checked-in comparison, and reproduce the optimized measurement with copy-paste commands.
 - **Potential impact (20 points):** reusable workspaces are a portable optimization pattern for allocation-heavy inference and simulation loops on Arm64. The checked-in evidence shows reduced allocator request volume without approximate math or changed search semantics.
 - **WOW factor (25 points):** the optimization lives inside a complete, visible Physical AI loop rather than a benchmark alone—the moving creature, archive diversity, history, lineage, and evidence stay connected.
 
@@ -73,7 +73,7 @@ observations
     → next candidate genome
 ```
 
-The reusable workspaces sit inside the observation → controller → action → simulation hot path. A loopback-only Rust server exposes validated replay data through `/api/replay`. The embedded 2D and 3D clients render that data but do not independently score or evolve genomes. The separate public site is a presentation surface and is not a second source of simulation truth.
+The reusable workspaces sit inside the observation → controller → action → simulation hot path. A loopback-only Rust server exposes validated replay data through `/api/replay`. The embedded 2D and 3D clients render that data but do not independently score or evolve genomes. The separate presentation site is not a second source of simulation truth and is not being offered as a public judge demo.
 
 Judge-readable diagrams:
 
@@ -87,10 +87,8 @@ Judge-readable diagrams:
 
 Prerequisites: Git, Rust 1.85 or newer, and an Arm64 macOS or Linux host. The authoritative measurements used Rust/Cargo 1.96.1 on an Apple M2; `Cargo.lock` pins dependencies.
 
-**Use these clone commands only after the `arm-create-2026` source tag has been published:**
-
 ```sh
-git clone --branch arm-create-2026 --depth 1 https://github.com/charlieijk/Axiom.git
+git clone https://github.com/charlieijk/Axiom.git
 cd Axiom
 uname -m
 cargo test --locked --test arm64_evidence
@@ -145,13 +143,12 @@ Then open `http://127.0.0.1:8787/3d`. The local service is intentionally unauthe
 
 https://github.com/charlieijk/Axiom
 
-**Internal readiness warning:** the repository is public and MIT-licensed, but public `main` currently remains at baseline commit `71d3897d`. Do not treat this link as judge-ready until all challenge code, evidence, tests, documentation, and assets are committed and pushed, and the intended `arm-create-2026` tag resolves publicly.
+The repository is public, its MIT license is detected by GitHub, and `main` contains the complete source, assets, evidence, and judge instructions required to build and test Axiom.
 
-Planned immutable reviewer links after publication:
+Immutable reviewer links for the challenge implementation snapshot:
 
-- Tagged source: `https://github.com/charlieijk/Axiom/tree/arm-create-2026`
-- Evidence protocol: `https://github.com/charlieijk/Axiom/blob/arm-create-2026/docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check`
-- Release: `https://github.com/charlieijk/Axiom/releases/tag/arm-create-2026`
+- Source: `https://github.com/charlieijk/Axiom/tree/6a1986b6b2bc6841052c7c14d0d0873f0b899e76`
+- Evidence protocol: `https://github.com/charlieijk/Axiom/blob/6a1986b6b2bc6841052c7c14d0d0873f0b899e76/docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check`
 
 ## Demo Video
 
@@ -175,7 +172,7 @@ Do not use copyrighted music, third-party marks without permission, or footage t
 
 ## Screenshot Shot List
 
-Upload in this order. Use [`docs/axiom-archive-lab-gen12.jpg`](docs/axiom-archive-lab-gen12.jpg) as the separate cover/thumbnail if Devpost permits it.
+Use [`docs/axiom-arm64-result.png`](docs/axiom-arm64-result.png) as the cover/thumbnail, then upload the product and architecture images in this order.
 
 1. [`docs/axiom-arm64-result.png`](docs/axiom-arm64-result.png)  
    **Caption:** On Apple M2 Arm64, Axiom's reusable rollout workspaces cut allocation/reallocation calls by 94.38% and requested allocation bytes by 89.73% across 2,048,400 deterministic steps, while the complete evolution report stayed identical.
@@ -199,19 +196,18 @@ Use [`docs/axiom-architecture.png`](docs/axiom-architecture.png) as a sixth imag
 - Rust formatting, clippy, workspace tests, release build, GUI smoke check, web tests, Flask tests, site build/lint/tests, asset checksums, and 84.63% line coverage passed locally.
 - `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities.
 - `gitleaks git --no-banner --redact` found no secrets in Git history.
-- `cargo package --locked --allow-dirty` verified the package contents.
+- `cargo package --locked` verified the clean package contents (61 files, 2.0 MiB uncompressed).
+- A fresh full optimized Arm64 allocation run exactly reproduced 730,613 allocation/reallocation calls, 220,528,660 requested bytes, and the checked-in full-report SHA-256.
+- Live GitHub CI is green, including its native Arm64 evidence lane.
 - The sealed security review reported one medium release-supply-chain issue and four low local/demo hardening issues; no secrets were found.
 
-### Must be completed before final Devpost entry
+### Resolved requirements and optional follow-ups
 
-- Commit and push all challenge-period code, raw evidence, tests, documentation, workflows, and judge assets.
-- Publish and verify the `arm-create-2026` tag before using tag-specific clone and release links.
-- Run `cargo package --locked` on the clean tree; the normal package command currently fails only because the worktree is dirty.
-- Pin or otherwise remediate the medium release-workflow supply-chain finding before using the automated release job.
+- The repository is public, MIT-licensed, and anonymously accessible, satisfying the official repository requirement.
+- Judges build the current public `main` branch; the immutable implementation links above preserve the measured challenge snapshot.
+- Pin or otherwise remediate the medium release-workflow supply-chain finding before triggering the automated release job.
 - Decide whether to record the optional video; if yes, publish it publicly and insert the URL.
-- Answer the four required official Arm feedback fields below.
 - Optionally provide a public demo URL; the event does not require one.
-- Review the title and tagline one final time against Devpost's project limits.
 
 ### Built with
 
@@ -224,12 +220,11 @@ Suggested Devpost tags: `Rust`, `Arm64`, `Apple Silicon`, `Neuroevolution`, `MAP
 - No energy reduction is claimed.
 - The production optimization is portable buffer reuse measured on Arm64, not handwritten NEON/SIMD code.
 - The demonstrated Physical AI system is simulated. Field Lab robot parameters are uncalibrated, and no physical-robot or sim-to-real validation is claimed.
-- The public presentation site does not run the authoritative Rust evolution backend.
+- The separate presentation site does not run the authoritative Rust evolution backend and is not offered as a public judge demo.
 - The local Rust GUI is an unauthenticated single-user loopback tool. Non-loopback use requires an authenticated TLS boundary and resource controls.
-- The planned Apple Silicon preview is ad-hoc signed, not notarized.
-- No public challenge release, public live demo, or finished video exists yet.
+- No public challenge binary release, public live demo, or finished video exists; none is required by the live form, so judges use the source-build path.
 
-## TODO Official Form Fields
+## Official Form Fields — Completed Draft Answers
 
 The live form does **not** request a Codex session ID. Do not add one.
 
@@ -237,52 +232,38 @@ The live form does **not** request a Codex session ID. Do not add one.
 
 **What was the hardest part of building or optimizing your project? Select all that apply**
 
-Participant confirmation required. Evidence-backed candidate: `Measuring performance`.
-
-Other exact options remain available in the live form; do not add them without participant confirmation.
+Answer: `Measuring performance`.
 
 ### Required field 27624
 
 **What would have made it easier to complete your project? Select all that apply.**
 
-Participant confirmation required. Evidence-backed candidates: `More benchmarking examples`; `More Arm-specific optimization guidance`.
+Answers: `More benchmarking examples`; `More Arm-specific optimization guidance`.
 
 ### Required field 27625
 
 **Did this challenge change your likelihood of building on Arm in the future?**
 
-TODO — choose exactly one:
-
-- `Yes, significantly more likely`
-- `Yes, somewhat more likely`
-- `No change`
-- `Less likely`
-- `Not sure yet`
+Answer: `Yes, somewhat more likely`.
 
 ### Required field 27626
 
 **How likely are you to continue developing, optimizing, or deploying this project after the challenge?**
 
-TODO — choose exactly one:
-
-- `Very likely`
-- `Somewhat likely`
-- `Not sure`
-- `Unlikely`
-- `I do not plan to continue this project`
+Answer: `Very likely`.
 
 ### Optional field 27628
 
 **What is one thing Arm could improve to better support developers like you?**
 
-Optional suggested wording—use only with participant approval:
+Answer:
 
 > Provide standardized native Arm benchmark runners and reproducibility guidance so developers can make defensible baseline-versus-optimized comparisons across devices.
 
 ### Final links and media
 
-- Repository URL: `https://github.com/charlieijk/Axiom` — challenge changes still need to be pushed.
-- Public demo URL: `TODO (optional)`.
-- Video URL: `TODO (optional)`.
-- Cover/thumbnail: `docs/axiom-archive-lab-gen12.jpg`.
+- Repository URL: `https://github.com/charlieijk/Axiom` — public, MIT-licensed, and ready for anonymous judging access.
+- Public demo URL: omitted (optional; no public demo exists).
+- Video URL: omitted (optional; no video exists).
+- Cover/thumbnail: `docs/axiom-arm64-result.png`.
 - Target track: `Track 1 — Physical AI`.
