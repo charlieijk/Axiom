@@ -153,8 +153,6 @@ jobs:
   arm64:
     name: Native Arm64 evidence smoke test
     runs-on: macos-15
-    env:
-      EVIDENCE_DIR: ${{ runner.temp }}/axiom-arm64-evidence
 
     steps:
       - name: Checkout
@@ -163,6 +161,11 @@ jobs:
           # Keep the recorded pre-optimization revision available to the
           # baseline Git-object provenance test.
           fetch-depth: 0
+
+      # `runner` is not a job-level context, so the evidence directory is
+      # exported here rather than under the job's `env:`.
+      - name: Locate the evidence directory outside the checkout
+        run: echo "EVIDENCE_DIR=${{ runner.temp }}/axiom-arm64-evidence" >> "$GITHUB_ENV"
 
       - name: Set up pinned evidence toolchain
         uses: dtolnay/rust-toolchain@1.96.1
