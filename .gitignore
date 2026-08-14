@@ -17,6 +17,12 @@
 .idea/
 .vscode/
 
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
 # Local experiment artifacts
 checkpoints/
 
