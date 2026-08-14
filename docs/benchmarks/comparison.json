@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "benchmark": "axiom-arm64-evolution-allocation-comparison",
+  "generated_at_utc": "2026-08-13T10:57:11Z",
+  "artifacts": {
+    "baseline": "arm64-allocation-baseline.json",
+    "optimized": "arm64-allocation-optimized.json"
+  },
+  "compatibility_checks": {
+    "authoritative_arm64": true,
+    "same_hardware_model": true,
+    "same_cpu_brand": true,
+    "same_os_version": true,
+    "same_rustc": true,
+    "same_cargo_lock_sha256": true,
+    "same_benchmark_source_sha256": true,
+    "same_workload": true,
+    "exact_full_report_digest": true,
+    "exact_full_report_sha256": true
+  },
+  "results": {
+    "allocation_calls": {
+      "baseline": 13000529,
+      "optimized": 730613,
+      "removed": 12269916,
+      "reduction_percent": 94.38,
+      "baseline_per_simulation_call": 2538.67,
+      "optimized_per_simulation_call": 142.67
+    },
+    "requested_bytes": {
+      "baseline": 2146339344,
+      "optimized": 220528660,
+      "removed": 1925810684,
+      "reduction_percent": 89.73,
+      "baseline_per_rollout_step": 1047.81,
+      "optimized_per_rollout_step": 107.66
+    },
+    "semantic_equivalence": {
+      "fnv1a64": "be0a71bc9f057db4",
+      "sha256": "a8118314dbb8960844a2b58787e5a9d892e4f9556e503db978c60a23b3a321a4",
+      "serialized_report_bytes": 1710519,
+      "archive_cells": 60,
+      "evaluated_genomes": 5120,
+      "history_entries": 40,
+      "lineage_entries": 3872
+    }
+  },
+  "runtime_claim": {
+    "status": "not_published",
+    "reason": "Exploratory timings were too variable for a defensible speedup claim. Timing uses a separate uninstrumented binary and should be rerun on a controlled host."
+  },
+  "measurement_note": "Requested bytes are allocator request volume, not peak RSS or resident memory."
+}

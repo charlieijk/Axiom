@@ -1,0 +1,89 @@
+{
+  "allocations": {
+    "calls": 730613,
+    "instrumented_allocator": true,
+    "requested_bytes": 220528660
+  },
+  "authoritative_arm64": true,
+  "benchmark": "axiom-arm64-evolution",
+  "deterministic_outcome": {
+    "archive_cells": 60,
+    "best_fitness_bits": 1141730189,
+    "evaluated_genomes": 5120,
+    "full_report_digest": "be0a71bc9f057db4",
+    "full_report_digest_algorithm": "fnv1a64-over-serde-json",
+    "full_report_sha256": "a8118314dbb8960844a2b58787e5a9d892e4f9556e503db978c60a23b3a321a4",
+    "history_entries": 40,
+    "lineage_entries": 3872,
+    "serialized_report_bytes": 1710519,
+    "stable_distance_bits": 1108109660
+  },
+  "environment": {
+    "allocation_counting_feature": true,
+    "arch": "aarch64",
+    "benchmark_source_sha256": "382d291ad9ad4688a9e9db92835bdca716e4a1b1e8dd44af1c689a07f1edfca1",
+    "build_label": "optimized",
+    "cargo": "cargo 1.96.1 (356927216 2026-06-26)",
+    "cargo_lock_sha256": "f39dc01fbdb454dc489ad1ee6fa6750d71dc75f61608a413fef39f13af75470d",
+    "cpu_brand": "Apple M2",
+    "executable_sha256": "9dc11e14b5e4360af5cf1abb4e85301d6081b2af047f632fa55800434097e337",
+    "git_commit": "71d3897dc04f90a4903a14fd737af1ad680cef7c",
+    "git_dirty": true,
+    "hardware_model": "Mac14,2",
+    "kernel": "Darwin 25.5.0 Darwin Kernel Version 25.5.0: Tue Jun  9 22:27:52 PDT 2026; root:xnu-12377.121.10~1/RELEASE_ARM64_T8112",
+    "logical_cpus": "8",
+    "memory_bytes": "8589934592",
+    "optimization_sources_sha256": {
+      "fitness": "c9e83d348e573f7c0da849719c5c0154e7a7dc0344920b6d02859cca4bda4f35",
+      "network": "f6e0159b1b4dae252f0a7e56377421e467e1f7ba1cff46dc7d33a02c5099e203",
+      "policy": "377404c878663380d612a44e1f8cf7569a5253210bedaa7341b635b1261fa388",
+      "simulation": "24575b1a9085b7d4fce8778d60e349532bdd8acfad372e593d4f6550360c1c6c"
+    },
+    "os": "macos",
+    "os_version": "26.5.2",
+    "package_version": "0.1.0",
+    "physical_cpus": "8",
+    "profile": "release",
+    "rustc": "rustc 1.96.1 (31fca3adb 2026-06-26)\nbinary: rustc\ncommit-hash: 31fca3adb283cc9dfd56b49cdee9a96eb9c96ffd\ncommit-date: 2026-06-26\nhost: aarch64-apple-darwin\nrelease: 1.96.1\nLLVM version: 22.1.2",
+    "rustflags": null,
+    "source_revision": "71d3897dc04f90a4903a14fd737af1ad680cef7c+buffer-reuse-working-tree",
+    "target_features": {
+      "neon": true
+    },
+    "timestamp_utc": "2026-08-13T10:57:11Z"
+  },
+  "mode": "allocations",
+  "reproduction": {
+    "actual_argv": [
+      "./target/release/examples/arm64_optimization_benchmark",
+      "--full",
+      "--allocations"
+    ],
+    "allocations": "cargo run --release --features allocation-counting --example arm64_optimization_benchmark -- --full --allocations",
+    "timing": "cargo run --release --example arm64_optimization_benchmark -- --full"
+  },
+  "schema_version": 2,
+  "timing": null,
+  "workload": {
+    "archive": {
+      "height": 8,
+      "width": 12,
+      "x_axis": "stable-distance",
+      "y_axis": "body-count"
+    },
+    "controller": "mixed-feedforward-recurrent-cpg",
+    "evaluation_steps": 400,
+    "generations": 40,
+    "name": "full",
+    "population": 128,
+    "reported_evaluated_genomes": 5120,
+    "rollout_steps": 2048400,
+    "search": "map-elites",
+    "seed": 1337,
+    "simulation_calls": 5121,
+    "task": "rough-terrain",
+    "threads": 1,
+    "timing_iterations": 7,
+    "timing_warmups": 2
+  }
+}
