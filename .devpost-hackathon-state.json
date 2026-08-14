@@ -1,0 +1,39 @@
+{
+  "plugin": "devpost-hackathon",
+  "version": 2,
+  "hackathon": {
+    "slug": "arm-ai-optimization-challenge",
+    "name": "Arm Create: AI Optimization Challenge",
+    "url": "https://arm-ai-optimization-challenge.devpost.com",
+    "selected": true,
+    "source": "known"
+  },
+  "participant": {
+    "name": "Charlie Cullen",
+    "display_name": "Charlie Cullen"
+  },
+  "project": {
+    "name": "Axiom",
+    "summary": "A deterministic embodied-evolution sandbox whose buffer-reused rollout path, measured on Arm64, cuts allocation/reallocation calls by 94.38% and requested allocation bytes by 89.73% while preserving the complete evolution report.",
+    "ai_usage": "Axiom evolves morphology and feedforward, recurrent, and CPG neural controllers in terrain simulations, preserving diverse behaviors in a MAP-Elites archive.",
+    "codex_usage": "Codex helped profile the rollout hot path, implement reusable neural/observation/snapshot workspaces, build the isolated Arm64 evidence harness, verify exact semantic equivalence, and strengthen tests, CI, architecture, and submission documentation."
+  },
+  "current_stage": "prepare-submission",
+  "completed_stages": [
+    "start-hackathon",
+    "review"
+  ],
+  "rules_acknowledged": true,
+  "learning": {
+    "status": "not-started",
+    "current_step": "",
+    "completed_steps": [],
+    "plan_file": "",
+    "checklist_file": ""
+  },
+  "submission": {
+    "draft_file": "devpost-submission.md",
+    "status": "drafting"
+  },
+  "next_command": "prepare-submission"
+}
