@@ -4,6 +4,32 @@ Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neu
 
 Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
 
+## Arm64 Optimization Challenge
+
+Axiom is entered in **Track 1 — Physical AI**: simulated sensor observations
+drive neural-controller inference, actuator commands, embodied motion, fitness,
+and MAP-Elites selection in one deterministic loop.
+
+Axiom's deterministic rollout hot path now reuses observation, neural-network,
+action, and snapshot buffers. On an Apple M2 Arm64 host, the full fixed-seed
+workload used **94.38% fewer allocation/reallocation calls** and requested
+**89.73% fewer allocation bytes**, while the complete evolution report remained
+identical to the pre-optimization baseline. See the reproducible protocol, raw
+JSON, source hashes, and limitations in
+[docs/ARM64_OPTIMIZATION.md](docs/ARM64_OPTIMIZATION.md). The curated screenshot
+sequence and sub-three-minute recording plan are in
+[docs/SUBMISSION_ASSETS.md](docs/SUBMISSION_ASSETS.md).
+
+Arm64 judges can run the copy-paste quick verification and inspect its expected
+semantic digest in the
+[Arm64 judge quick check](docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check).
+Apple Silicon release usage and the source-build fallback are documented in
+[docs/APPLE_SILICON.md](docs/APPLE_SILICON.md).
+
+![Axiom's measured Apple M2 Arm64 allocation result](docs/axiom-arm64-result.png)
+
+![Axiom Archive Lab showing a live evolved creature and selectable MAP-Elites repertoire](docs/axiom-archive-lab-gen12.jpg)
+
 This rebuild is scoped from the previous Axiom review thread:
 
 - morphology genomes with directional attachments
@@ -27,6 +53,7 @@ cargo run -- evolve --generations 10 --population 32 --steps 180 --save checkpoi
 cargo run -- inspect checkpoints/run.json
 cargo run -- animate --checkpoint checkpoints/run.json --frames 160 --fps 20
 cargo run --example rough_terrain_benchmark
+cargo run --release --locked --example arm64_optimization_benchmark -- --quick
 ```
 
 `cargo run -- gui` binds `127.0.0.1:8787` and is unauthenticated by intent —
@@ -34,6 +61,9 @@ a single-user local tool. Do not expose it beyond the host; see
 [SECURITY.md](SECURITY.md) for the trust boundary.
 
 ## Architecture
+
+See the judge-readable system map and authority boundaries in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - `genome.rs` encodes body morphology and neural genomes.
 - `network.rs` compiles neural genomes and keeps bias nodes separate from external inputs.
@@ -46,7 +76,7 @@ a single-user local tool. Do not expose it beyond the host; see
 
 ## Current Scope
 
-The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; three.js from CDN), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. Evolved replays now carry the selected genome's real parent lineage and mutation record rather than inferring ancestry from generation aggregates.
+The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; Three.js r165 is bundled for offline use), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. Evolved replays now carry the selected genome's real parent lineage and mutation record rather than inferring ancestry from generation aggregates.
 
 ## Reproducible Experiments
 

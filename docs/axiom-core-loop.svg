@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Axiom authoritative embodied-evolution loop</title>
+  <desc id="desc">Sensor observations feed a neural brain, which sends actuator actions into the deterministic simulation. Metrics feed fitness and MAP-Elites selection, which produces the next candidate genome.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06100d"/>
+      <stop offset="1" stop-color="#10221a"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0 0L12 6L0 12Z" fill="#a3e87f"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="90" y="82" fill="#eff4e8" font-size="29" font-weight="700" letter-spacing="11">AXIOM</text>
+    <text x="90" y="125" fill="#91a59a" font-size="18" font-weight="650" letter-spacing="4">AUTHORITATIVE RUST EVOLUTION LOOP</text>
+    <text x="90" y="210" fill="#f1eedf" font-family="Georgia, 'Times New Roman', serif" font-size="59" font-weight="600">From sensing to diverse embodied elites</text>
+    <text x="90" y="257" fill="#a8b7ae" font-size="21">One deterministic source of truth connects inference, motion, scoring, and selection.</text>
+
+    <g stroke="#a3e87f" stroke-width="4" fill="none" marker-end="url(#arrow)">
+      <path d="M345 455H476"/>
+      <path d="M719 455H850"/>
+      <path d="M1095 455H1226"/>
+      <path d="M1348 570C1348 743 1120 782 930 782H347C215 782 178 691 178 594"/>
+    </g>
+
+    <g>
+      <rect x="90" y="350" width="255" height="210" rx="22" fill="#173b30" stroke="#65bd98" stroke-width="2"/>
+      <text x="120" y="399" fill="#a3e87f" font-size="16" font-weight="750" letter-spacing="2">01 · SENSE</text>
+      <text x="120" y="452" fill="#f2f0e5" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="600">Observations</text>
+      <text x="120" y="492" fill="#b6c4bc" font-size="18">Pose, joint state,</text>
+      <text x="120" y="521" fill="#b6c4bc" font-size="18">velocity, terrain</text>
+
+      <rect x="476" y="350" width="243" height="210" rx="22" fill="#173b30" stroke="#65bd98" stroke-width="2"/>
+      <text x="506" y="399" fill="#a3e87f" font-size="16" font-weight="750" letter-spacing="2">02 · INFER</text>
+      <text x="506" y="452" fill="#f2f0e5" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="600">Genome + Brain</text>
+      <text x="506" y="492" fill="#b6c4bc" font-size="18">Feedforward, recurrent,</text>
+      <text x="506" y="521" fill="#b6c4bc" font-size="18">or CPG controller</text>
+
+      <rect x="850" y="350" width="245" height="210" rx="22" fill="#173b30" stroke="#65bd98" stroke-width="2"/>
+      <text x="880" y="399" fill="#a3e87f" font-size="16" font-weight="750" letter-spacing="2">03 · ACT</text>
+      <text x="880" y="452" fill="#f2f0e5" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="600">Simulation</text>
+      <text x="880" y="492" fill="#b6c4bc" font-size="18">Actuator commands drive</text>
+      <text x="880" y="521" fill="#b6c4bc" font-size="18">the embodied world</text>
+
+      <rect x="1226" y="350" width="284" height="210" rx="22" fill="#173b30" stroke="#65bd98" stroke-width="2"/>
+      <text x="1256" y="399" fill="#a3e87f" font-size="16" font-weight="750" letter-spacing="2">04 · SELECT</text>
+      <text x="1256" y="452" fill="#f2f0e5" font-family="Georgia, 'Times New Roman', serif" font-size="31" font-weight="600">Fitness + MAP-Elites</text>
+      <text x="1256" y="492" fill="#b6c4bc" font-size="18">Score, insert, replace,</text>
+      <text x="1256" y="521" fill="#b6c4bc" font-size="18">and sample diverse elites</text>
+    </g>
+
+    <g fill="#82978c" font-size="16" font-weight="650" letter-spacing="1">
+      <text x="377" y="435">SENSOR VECTOR</text>
+      <text x="745" y="435">ACTIONS</text>
+      <text x="1124" y="435">METRICS</text>
+      <text x="720" y="817" text-anchor="middle">NEXT CANDIDATE GENOME · FIXED-SEED REPRODUCIBILITY · VERSIONED CHECKPOINTS</text>
+    </g>
+
+    <rect x="90" y="655" width="1420" height="58" rx="12" fill="#13271f" stroke="#355748"/>
+    <text x="800" y="692" fill="#c5f3a8" font-size="21" font-weight="700" text-anchor="middle">Reusable rollout workspaces—measured on Arm64—reduce allocator traffic without changing scalar operation order.</text>
+    <text x="90" y="870" fill="#6e8378" font-size="16">Full authority and trust-boundary map: docs/ARCHITECTURE.md</text>
+  </g>
+</svg>

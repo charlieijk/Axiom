@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Axiom Arm64 allocation optimization result</title>
+  <desc id="desc">On an Apple M2 Arm64 host, Axiom reduced allocation and reallocation calls by 94.38 percent and requested allocation bytes by 89.73 percent while preserving the complete evolution report.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07110d"/>
+      <stop offset="1" stop-color="#101d17"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#85d7a7"/>
+      <stop offset="1" stop-color="#c6f59f"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-100%" width="140%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#background)"/>
+  <circle cx="1480" cy="-20" r="330" fill="#17382c" opacity="0.45"/>
+  <circle cx="1520" cy="10" r="190" fill="#356c4c" opacity="0.18"/>
+
+  <g font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="96" y="78" fill="#f0efe5" font-size="30" font-weight="700" letter-spacing="12">AXIOM</text>
+    <text x="96" y="116" fill="#8ba194" font-size="18" font-weight="600" letter-spacing="4">EMBODIED EVOLUTION · ARM64 OPTIMIZATION</text>
+
+    <text x="96" y="205" fill="#f5f1df" font-family="Georgia, 'Times New Roman', serif" font-size="67" font-weight="600">Same evolution.</text>
+    <text x="96" y="275" fill="#bff39a" font-family="Georgia, 'Times New Roman', serif" font-size="67" font-weight="600">Far less allocator traffic.</text>
+    <text x="96" y="323" fill="#b5c0b9" font-size="21">Apple M2 · Arm64 · 2,048,400 deterministic rollout steps · one thread</text>
+
+    <g transform="translate(96 390)">
+      <text x="0" y="0" fill="#d7ddd8" font-size="20" font-weight="700" letter-spacing="2">ALLOCATION / REALLOCATION CALLS</text>
+      <text x="1180" y="0" fill="#bff39a" font-size="27" font-weight="750" text-anchor="end">94.38% FEWER</text>
+
+      <text x="0" y="55" fill="#9fada5" font-size="18">Baseline</text>
+      <rect x="122" y="34" width="850" height="28" rx="14" fill="#66726b"/>
+      <text x="994" y="56" fill="#f1f0e8" font-size="22" font-weight="650">13,000,529</text>
+
+      <text x="0" y="102" fill="#9fada5" font-size="18">Optimized</text>
+      <rect x="122" y="81" width="48" height="28" rx="14" fill="url(#accent)" filter="url(#glow)"/>
+      <text x="192" y="103" fill="#c9f5aa" font-size="22" font-weight="700">730,613</text>
+    </g>
+
+    <line x1="96" y1="535" x2="1280" y2="535" stroke="#31453b" stroke-width="1"/>
+
+    <g transform="translate(96 590)">
+      <text x="0" y="0" fill="#d7ddd8" font-size="20" font-weight="700" letter-spacing="2">REQUESTED ALLOCATION BYTES</text>
+      <text x="1180" y="0" fill="#bff39a" font-size="27" font-weight="750" text-anchor="end">89.73% FEWER</text>
+
+      <text x="0" y="55" fill="#9fada5" font-size="18">Baseline</text>
+      <rect x="122" y="34" width="850" height="28" rx="14" fill="#66726b"/>
+      <text x="994" y="56" fill="#f1f0e8" font-size="22" font-weight="650">2.146 GB</text>
+
+      <text x="0" y="102" fill="#9fada5" font-size="18">Optimized</text>
+      <rect x="122" y="81" width="87" height="28" rx="14" fill="url(#accent)" filter="url(#glow)"/>
+      <text x="231" y="103" fill="#c9f5aa" font-size="22" font-weight="700">220.5 MB</text>
+    </g>
+
+    <rect x="96" y="735" width="1408" height="102" rx="14" fill="#14271f" stroke="#355747"/>
+    <circle cx="140" cy="786" r="23" fill="#bff39a"/>
+    <path d="M129 786l8 8 16-18" fill="none" stroke="#0b1711" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="182" y="779" fill="#f1f0e7" font-size="23" font-weight="700">Complete EvolutionReport unchanged</text>
+    <text x="182" y="811" fill="#9fb2a7" font-size="18">1,710,519 bytes · champion, archive, history, and 3,872 lineage records · SHA-256 verified</text>
+    <text x="1460" y="779" fill="#c9f5aa" font-size="18" font-weight="700" text-anchor="end">NO RUNTIME SPEEDUP CLAIM</text>
+    <text x="1460" y="811" fill="#83958b" font-size="16" text-anchor="end">Allocation evidence only</text>
+
+    <text x="96" y="872" fill="#6f8378" font-size="15">Reproducible protocol and raw JSON: docs/ARM64_OPTIMIZATION.md</text>
+    <text x="1504" y="872" fill="#6f8378" font-size="15" text-anchor="end">Baseline commit 71d3897 · Rust 1.96.1 · release profile</text>
+  </g>
+</svg>

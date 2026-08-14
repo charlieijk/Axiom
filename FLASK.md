@@ -6,10 +6,11 @@ the adapter does not reimplement those paths in Python.
 
 ## Start
 
-From the repository root, using a Python environment with the dependencies in
-`requirements-flask.txt`:
+From the repository root, using Python 3.10 or newer with the dependencies in
+`requirements-flask-lock.txt`:
 
 ```bash
+python -m pip install -r requirements-flask-lock.txt
 python flask_app.py
 ```
 

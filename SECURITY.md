@@ -31,8 +31,8 @@ rejected with `400` instead of being run.
 
 ## Supply chain
 
-- `cargo audit` runs as its own CI job and fails on any known advisory in the
-  dependency tree.
+- `cargo audit` runs as its own CI job, fails on known vulnerabilities, and
+  reports maintenance warnings in the dependency tree.
 - The publishable `axiom` crate depends only on `serde` and `serde_json`; the
   heavier physics stack belongs to the `axiom-field` lab crate, which is
   `publish = false`.
