@@ -25,6 +25,10 @@ Open the loopback URL printed by the command. The default is `http://127.0.0.1:8
 
 ## Commands
 
+`bin/axiom` wraps these as short subcommands (`axiom test`, `axiom lint`,
+`axiom bench arm64`, `axiom verify`) and forwards simulation commands to the
+Rust binary; the table below stays the canonical, CI-verified form.
+
 | Task | Command |
 | --- | --- |
 | Install site dependencies | `npm --prefix site ci` |
