@@ -1,9 +1,10 @@
 name: macOS compatibility and site
 
 on:
+  # PR verification is covered by the Linux jobs; macOS bills at 10x and was
+  # burning most of its minutes on Dependabot PRs. Runs per merge and on demand.
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
