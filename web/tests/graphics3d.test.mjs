@@ -680,16 +680,40 @@ test("the action buttons drive playback, camera mode and effects", async () => {
   assert.equal(ui.playToggle.querySelector("span").textContent, "Play");
   assert.equal(ui.playToggle.querySelector("i").className, "ph ph-play");
 
+  // The label and the `is-active` ring are the only things on screen that say
+  // which mode the camera is in, so both are checked at every step rather than
+  // just the internal `state.cameraMode`. `follow` is the default and is the
+  // one mode that must NOT be highlighted.
+  assert.equal(ui.cameraMode.querySelector("span").textContent, "Follow");
+  assert.equal(ui.cameraMode.classList.contains("is-active"), false, "the default camera mode is not a highlight");
+
   ui.cameraMode.dispatch("click");
   assert.equal(state.cameraMode, "orbit");
+  assert.equal(ui.cameraMode.querySelector("span").textContent, "Orbit");
+  assert.equal(ui.cameraMode.classList.contains("is-active"), true);
   ui.cameraMode.dispatch("click");
   assert.equal(state.cameraMode, "showcase");
+  assert.equal(ui.cameraMode.querySelector("span").textContent, "Show");
+  assert.equal(ui.cameraMode.classList.contains("is-active"), true);
   ui.cameraMode.dispatch("click");
   assert.equal(state.cameraMode, "follow", "the camera modes must cycle rather than run off the end");
+  assert.equal(ui.cameraMode.querySelector("span").textContent, "Follow");
+  assert.equal(
+    ui.cameraMode.classList.contains("is-active"),
+    false,
+    "cycling back to follow must clear the highlight, not leave it stuck on",
+  );
 
+  // Effects are on by default, so here the highlight runs the other way round.
+  assert.equal(ui.fxToggle.classList.contains("is-active"), true);
   ui.fxToggle.dispatch("click");
   assert.equal(state.effectsEnabled, false);
   assert.equal(ui.fxToggle.querySelector("span").textContent, "Lite FX");
+  assert.equal(ui.fxToggle.classList.contains("is-active"), false);
+  ui.fxToggle.dispatch("click");
+  assert.equal(state.effectsEnabled, true);
+  assert.equal(ui.fxToggle.querySelector("span").textContent, "Full FX");
+  assert.equal(ui.fxToggle.classList.contains("is-active"), true);
 
   // Space is the playback shortcut, and must not also scroll the page.
   let prevented = 0;
