@@ -9,7 +9,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-import { createCanvasContext, createDocumentStub, createWindowStub } from "./support/dom.mjs";
+// The element stub already hands app.js a canvas context from its own
+// getContext(), so this suite never needs createCanvasContext directly.
+import { createDocumentStub, createWindowStub } from "./support/dom.mjs";
 
 const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 

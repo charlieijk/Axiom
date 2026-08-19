@@ -52,6 +52,23 @@ jobs:
             node --input-type=module --check < "${file}"
           done
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install web lint toolchain
+        # Root package.json is private and carries eslint only; the browser
+        # clients themselves ship no dependencies.
+        run: npm ci
+
+      - name: Lint browser clients
+        # web/app.js is a classic script and web/graphics3d*.js are ES modules;
+        # eslint.config.mjs parses each in its own module system.
+        run: npm run lint
+
       - name: Browser logic tests
         # Exercises web/app.js and the 3D journal modules under node:test. The
         # bare directory form is not a valid target, so the files are globbed.

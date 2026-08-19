@@ -6,6 +6,9 @@
 /.gradle/
 /build/
 
+# Node tooling output (the web/ lint toolchain and site/ both install here)
+node_modules/
+
 # Local environment files
 .env
 .env.*
