@@ -31,16 +31,46 @@ import {
 
 const THREE_MODULE_URL = "/vendor/three.module.min.js";
 
-import(THREE_MODULE_URL)
-  .then((THREE) => start(THREE))
-  .catch((error) => {
-    ui.fieldNote.textContent = "Three.js could not load for this browser session.";
-    ui.playToggle.disabled = true;
-    ui.reroll.disabled = true;
-    console.error(error);
-  });
+/**
+ * The world builders, injectable so the boot sequence can be exercised against
+ * recording stand-ins. Same reason graphics3d-scene.js takes THREE as a
+ * parameter instead of importing it: the page's own wiring is what we want to
+ * test, not three.js.
+ */
+export const DEFAULT_SCENERY = {
+  createSceneParts,
+  createCreatureRenderer,
+  createTerrain,
+  updateCamera,
+};
 
-function start(THREE) {
+export function reportThreeLoadFailure(error) {
+  ui.fieldNote.textContent = "Three.js could not load for this browser session.";
+  ui.playToggle.disabled = true;
+  ui.reroll.disabled = true;
+  console.error(error);
+}
+
+// The page boots itself on import. The promise is exported so the failure path
+// is observable rather than a floating side effect.
+export const threeReady = import(THREE_MODULE_URL)
+  .then((THREE) => start(THREE))
+  .catch(reportThreeLoadFailure);
+
+/**
+ * Build the scene, wire the page, and start rendering.
+ *
+ * Returns the handles the boot sequence would otherwise keep to itself, so a
+ * caller (today: the tests) can drive a frame or a refetch deliberately instead
+ * of waiting on requestAnimationFrame and the network.
+ */
+export function start(THREE, scenery = DEFAULT_SCENERY) {
+  const {
+    createSceneParts: buildSceneParts,
+    createCreatureRenderer: buildCreatureRenderer,
+    createTerrain: buildTerrain,
+    updateCamera: framePosition,
+  } = scenery;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#08110f");
   scene.fog = new THREE.Fog("#08110f", 11, 34);
@@ -59,14 +89,14 @@ function start(THREE) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const clock = new THREE.Clock();
-  const renderParts = createSceneParts(THREE, scene);
-  const creature = createCreatureRenderer(THREE, scene);
+  const renderParts = buildSceneParts(THREE, scene);
+  const creature = buildCreatureRenderer(THREE, scene);
   const cameraScratch = {
     target: new THREE.Vector3(),
     offset: new THREE.Vector3(),
     desired: new THREE.Vector3(),
   };
-  let terrain = createTerrain(THREE, replayRequest.task);
+  let terrain = buildTerrain(THREE, replayRequest.task);
   scene.add(terrain.mesh);
 
   function resize() {
@@ -130,7 +160,7 @@ function start(THREE) {
 
       scene.remove(terrain.mesh);
       terrain.dispose();
-      terrain = createTerrain(THREE, state.replay.task);
+      terrain = buildTerrain(THREE, state.replay.task);
       scene.add(terrain.mesh);
       creature.rebuild(state.replay.body);
       updateMetrics();
@@ -171,7 +201,7 @@ function start(THREE) {
       const frame = state.replay.frames[state.frameIndex];
       creature.update(frame, state.replay.body, deltaSeconds);
       renderParts.update(frame, state.replay.task, now * 0.001);
-      updateCamera(camera, frame, state.replay.task, deltaSeconds, cameraScratch);
+      framePosition(camera, frame, state.replay.task, deltaSeconds, cameraScratch);
       updateMetrics();
     }
 
@@ -198,7 +228,7 @@ function start(THREE) {
   bindPointerInput(canvas);
   bindActions(fetchReplay);
   resize();
-  fetchReplay().catch((error) => {
+  const ready = fetchReplay().catch((error) => {
     ui.fieldNote.textContent = "Replay data failed to load.";
     console.error(error);
   });
@@ -237,9 +267,11 @@ function start(THREE) {
     archiveCoverage: state.replay?.evolution_history?.at(-1)?.archive_coverage ?? null,
     loading: ui.loadingState.classList.contains("is-visible"),
   });
+
+  return { fetchReplay, renderLoop, resize, ready };
 }
 
-function bindPointerInput(target) {
+export function bindPointerInput(target) {
   target.addEventListener("pointerdown", (event) => {
     target.setPointerCapture(event.pointerId);
     state.dragging = true;
@@ -280,7 +312,7 @@ function bindPointerInput(target) {
   }, { passive: false });
 }
 
-function bindActions(fetchReplay) {
+export function bindActions(fetchReplay) {
   ui.controller.value = replayRequest.controller;
   ui.task.value = replayRequest.task;
   ui.controllerNote.textContent = controllerBehaviorNote(replayRequest.controller);
@@ -336,7 +368,7 @@ function bindActions(fetchReplay) {
   });
 }
 
-function updateActionButtons() {
+export function updateActionButtons() {
   setActionButton(ui.playToggle, state.playing ? "Pause" : "Play", state.playing ? "ph-pause" : "ph-play");
   setActionButton(ui.cameraMode, CAMERA_LABELS[state.cameraMode], "ph-video-camera");
   setActionButton(ui.fxToggle, state.effectsEnabled ? "Full FX" : "Lite FX", "ph-sparkle");
@@ -349,7 +381,7 @@ function updateActionButtons() {
   ui.fxToggle.classList.toggle("is-active", state.effectsEnabled);
 }
 
-function setActionButton(button, label, iconClass) {
+export function setActionButton(button, label, iconClass) {
   const text = button.querySelector("span");
   const icon = button.querySelector("i");
   if (text) {
@@ -360,7 +392,7 @@ function setActionButton(button, label, iconClass) {
   }
 }
 
-function updateMetrics() {
+export function updateMetrics() {
   if (!state.replay) {
     return;
   }
@@ -370,7 +402,7 @@ function updateMetrics() {
   ui.tilt.textContent = frame.tilt.toFixed(2);
 }
 
-function fadeHint() {
+export function fadeHint() {
   if (state.hintFaded) {
     return;
   }
