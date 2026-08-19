@@ -21,10 +21,19 @@ const controls = {
   tilt: document.getElementById("metric-tilt"),
 };
 
+/**
+ * A reduced-motion preference must not be overridden by the page starting a
+ * looping animation on its own. Playback stays available -- Play, Restart and
+ * the scrubber all still work -- it just has to be asked for.
+ */
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 const state = {
   replay: null,
   frameIndex: 0,
-  playing: true,
+  playing: !prefersReducedMotion(),
   lastTick: performance.now(),
   accumulator: 0,
   replayRequestId: 0,
@@ -78,8 +87,8 @@ async function fetchReplay() {
   canvas.dataset.frames = String(state.replay.frames.length);
   state.frameIndex = 0;
   state.accumulator = 0;
-  state.playing = true;
-  controls.play.textContent = "Pause";
+  state.playing = !prefersReducedMotion();
+  controls.play.textContent = state.playing ? "Pause" : "Play";
   controls.scrubber.max = Math.max(0, state.replay.frames.length - 1);
   controls.bodyCount.textContent = String(state.replay.body.length);
   controls.jointCount.textContent = String(Math.max(0, state.replay.body.length - 1));
@@ -372,6 +381,9 @@ window.render_game_to_text = () =>
   });
 
 window.addEventListener("resize", resizeCanvas);
+// The markup ships the autoplay label; correct it before the first paint if
+// this visitor asked for less motion.
+controls.play.textContent = state.playing ? "Pause" : "Play";
 resizeCanvas();
 requestReplay();
 requestAnimationFrame(tick);
