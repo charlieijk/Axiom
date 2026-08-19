@@ -1,3 +1,12 @@
+/* The field journal is a single dark theme, on purpose.
+ *
+ * `prefers-color-scheme` is deliberately not honoured: the stage is a WebGL
+ * scene whose background, fog and light rig are set in graphics3d.js and
+ * graphics3d-scene.js, and the journal panel is read against that scene. A
+ * light shell would leave a black rectangle in the middle of the page.
+ * `color-scheme: dark` states the commitment so the browser matches its own
+ * scrollbars and form controls; a real light theme starts with a scene palette,
+ * not a stylesheet. */
 :root {
   color-scheme: dark;
   --ink: #06100d;
@@ -979,6 +988,49 @@ button.archive-cell.is-selected {
 
   .evolve-button {
     grid-column: auto;
+  }
+}
+
+/* iPhone SE / 12 mini class.
+ *
+ * The 620px rules still float the header and the progress panel over the stage
+ * as percentage-width overlays; at 375px that is a 247px header and a 116px
+ * chart, both too narrow to read. Here the header becomes a full-width band and
+ * the progress panel drops out, joining the legend, live metrics and control
+ * hint the 620px block already hides. Nothing is lost with it: the same
+ * generation, fitness and coverage figures are in the timeline section below,
+ * which stays visible. */
+@media (max-width: 400px) {
+  .field-journal-shell {
+    grid-template-rows: 56vh auto auto;
+  }
+
+  .stage-header {
+    width: auto;
+    right: 0;
+    padding: 12px 14px 14px;
+  }
+
+  .progress-panel {
+    display: none;
+  }
+
+  .journal-panel {
+    padding: 16px;
+  }
+
+  .generation-intro h1 {
+    font-size: 34px;
+  }
+
+  .generation-timeline {
+    padding: 16px;
+  }
+
+  .stage-actions button,
+  .stage-actions a {
+    width: 34px;
+    min-width: 34px;
   }
 }
 

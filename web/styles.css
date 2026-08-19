@@ -1,3 +1,13 @@
+/* Axiom's 2D simulator is a single dark theme, on purpose.
+ *
+ * `prefers-color-scheme` is deliberately not honoured here: the viewport is a
+ * canvas whose palette is drawn by app.js -- the terrain gradient, the ground
+ * grid, the body fills and the joint strokes are all literal colours in
+ * `draw()`. A light CSS shell around a permanently dark canvas would be worse
+ * than the honest dark one, so `color-scheme: dark` states the commitment and
+ * the browser paints its own form controls and scrollbars to match. Making the
+ * page genuinely theme-aware means giving app.js a palette first.
+ */
 :root {
   color-scheme: dark;
   --bg: #101210;
@@ -215,6 +225,16 @@ button:hover,
   border-color: var(--amber);
 }
 
+/* Keyboard users get the same affordance the inputs already had: the whole
+ * control row is reachable with Tab alone, so every stop has to be visible. */
+button:focus-visible,
+.button-link:focus-visible,
+input[type="range"]:focus-visible {
+  border-color: var(--green);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(123, 216, 143, 0.14);
+}
+
 .range-row {
   grid-template-columns: 72px minmax(0, 1fr) 54px;
   align-items: center;
@@ -281,5 +301,70 @@ output {
   .hud div {
     min-width: 0;
     flex: 1;
+  }
+}
+
+/* iPhone SE / 12 mini class. Below ~400px the four HUD chips and the two-up
+ * control grid stop fitting on one line, and the 24px brand heading crowds the
+ * panel it sits in. */
+@media (max-width: 400px) {
+  .simulator-shell {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .viewport-panel {
+    min-height: 46vh;
+  }
+
+  .control-panel {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .hud {
+    top: 10px;
+    gap: 6px;
+  }
+
+  .hud div,
+  .status-grid div {
+    min-width: 0;
+    padding: 7px 8px;
+  }
+
+  .hud strong,
+  .status-grid strong {
+    font-size: 15px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .range-row {
+    grid-template-columns: 60px minmax(0, 1fr) 46px;
+    gap: 8px;
+  }
+}
+
+/* The replay itself is driven by requestAnimationFrame, so the motion that
+ * matters is switched off in app.js (`prefersReducedMotion`), which leaves the
+ * first frame on screen rather than looping it. This block covers the CSS side:
+ * any transition or keyframe added later inherits the preference instead of
+ * having to remember it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

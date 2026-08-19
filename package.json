@@ -1,0 +1,17 @@
+{
+  "name": "axiom-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lint and test tooling for the browser replay clients in web/. Not published; the clients themselves are embedded in the Rust binary via include_str!.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint",
+    "test": "node --test web/tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "eslint": "9.39.1",
+    "globals": "16.5.0"
+  }
+}

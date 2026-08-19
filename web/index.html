@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Axiom Creature Simulator</title>
-    <link rel="stylesheet" href="/styles.css?v=2" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <main class="simulator-shell">
       <section class="viewport-panel" aria-label="Creature simulator viewport">
-        <canvas id="simulator" width="1280" height="760"></canvas>
+        <canvas id="simulator" width="1280" height="760" aria-label="Creature replay animation; the same run is reported in the metrics and status panels"></canvas>
         <div class="hud">
           <div>
             <span class="metric-label">Time</span>
@@ -101,6 +101,6 @@
       </aside>
     </main>
 
-    <script src="/app.js?v=2"></script>
+    <script src="/app.js"></script>
   </body>
 </html>

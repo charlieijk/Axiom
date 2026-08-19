@@ -28,11 +28,14 @@ export function replayFieldNote(replay) {
   return `Evolved ${replay.population} candidates over ${replay.generations} generations.${selection} Distance ${formatMetric(replay.best_distance, 2)}, stable distance ${formatMetric(replay.stable_distance, 2)}, stability ${formatMetric(replay.stability, 2)}; staged with follow-camera framing.`;
 }
 
+// Renders the loading veil only. The evolve button's enabled state belongs to
+// whoever is running the request -- fetchReplay disables it on the way in and
+// re-enables it in its `finally`, so a second owner here would just be a
+// duplicate write that hides a regression in that guarantee.
 export function setLoadingState(status) {
   const visible = status !== "ready";
   ui.loadingState.classList.toggle("is-visible", visible);
   ui.loadingState.classList.toggle("is-error", status === "error");
-  ui.reroll.disabled = status === "loading";
 }
 
 export function renderFieldJournal(replay) {

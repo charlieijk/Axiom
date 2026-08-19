@@ -21,6 +21,11 @@ const GRAPHICS_STATE_JS: &str = include_str!("../web/graphics3d-state.js");
 const GRAPHICS_SCENE_JS: &str = include_str!("../web/graphics3d-scene.js");
 const GRAPHICS_JOURNAL_JS: &str = include_str!("../web/graphics3d-journal.js");
 const THREE_JS: &str = include_str!("../web/vendor/three.module.min.js");
+// Vendored so /3d loads no third-party host. Both carry their font binaries as
+// data: URIs, which is what keeps them plain text on this String-only asset
+// path; see web/vendor/README.md.
+const PHOSPHOR_CSS: &str = include_str!("../web/vendor/phosphor-icons.css");
+const FONTS_CSS: &str = include_str!("../web/vendor/fonts.css");
 
 #[derive(Clone, Debug)]
 pub struct GuiConfig {
@@ -97,6 +102,20 @@ pub fn gui_smoke_check() -> io::Result<()> {
             "3D GUI assets did not include expected scene markers",
         ));
     }
+    let phosphor_css = response_body("/vendor/phosphor-icons.css");
+    let fonts_css = response_body("/vendor/fonts.css");
+    if !phosphor_css.contains(".ph-pause:before") || !fonts_css.contains("Manrope Variable") {
+        return Err(io::Error::other(
+            "vendored icon and font stylesheets were not served",
+        ));
+    }
+    // /3d must stay self-hosted: an external <link> or <script> is a silent
+    // dependency on a host Axiom does not control.
+    if graphics.contains("https://") {
+        return Err(io::Error::other(
+            "3D GUI page referenced an external host; vendor the asset instead",
+        ));
+    }
     let graphics_state_js = response_body("/graphics3d-state.js");
     let graphics_scene_js = response_body("/graphics3d-scene.js");
     let graphics_journal_js = response_body("/graphics3d-journal.js");
@@ -168,6 +187,9 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
             "application/javascript; charset=utf-8",
             response_body(path),
         ),
+        "/vendor/phosphor-icons.css" | "/vendor/fonts.css" => {
+            ("200 OK", "text/css; charset=utf-8", response_body(path))
+        }
         "/api/replay" => api_replay_response(query),
         _ => (
             "404 Not Found",
@@ -177,6 +199,9 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     };
 
     let response = format!(
+        // `no-store` is why the pages carry no `?v=` cache-busting query
+        // strings: there is no cache here to bust, and a hand-maintained
+        // version token would only drift from the file it claims to describe.
         "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{body}",
         body.len()
     );
@@ -195,6 +220,8 @@ fn response_body(path: &str) -> String {
         "/graphics3d-scene.js" => GRAPHICS_SCENE_JS.to_string(),
         "/graphics3d-journal.js" => GRAPHICS_JOURNAL_JS.to_string(),
         "/vendor/three.module.min.js" => THREE_JS.to_string(),
+        "/vendor/phosphor-icons.css" => PHOSPHOR_CSS.to_string(),
+        "/vendor/fonts.css" => FONTS_CSS.to_string(),
         _ => String::new(),
     }
 }
