@@ -7,9 +7,18 @@
 //   * web/app.js is a CLASSIC script (`<script src>`), so its top-level
 //     `function` declarations are globals -- that is exactly how
 //     web/tests/app.test.mjs reaches fetchReplay/tick through a vm context.
-//     Parsed as a module it would gain module scope, and every one of those
-//     declarations would look unused.
 //   * web/graphics3d*.js are ES modules loaded with `<script type="module">`.
+//
+// What `sourceType: "script"` actually buys on app.js was measured rather than
+// assumed. Flipping it to "module" reports NOTHING today -- every top-level
+// declaration in app.js is also referenced inside app.js, so no-unused-vars is
+// silent either way, and `globals.browser` supplies `document`/`window` in both
+// modes. The difference that matters is the parse: under "script" an `import`
+// or `export` appearing in app.js is a parsing error, which is exactly what the
+// browser does with it (`SyntaxError: Cannot use import statement outside a
+// module`); under "module" it lints clean and breaks the page. So this is a
+// gate against someone modernising the classic script in place, not a scoping
+// nicety.
 //
 // site/ is a separate React/Vinext package with its own eslint config and its
 // own CI job; it is ignored here so the two never fight over the same files.

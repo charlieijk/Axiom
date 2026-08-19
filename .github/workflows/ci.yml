@@ -43,12 +43,17 @@ jobs:
         run: cargo llvm-cov --workspace --fail-under-lines 80
 
       - name: JavaScript syntax
-        # The graphics3d files and vendored Three.js build are ES modules;
-        # parse them via stdin so the check works without package-type
-        # inference.
+        # Each file is parsed the way the browser parses it. web/app.js is a
+        # classic `<script src>`: checked as a module it would ACCEPT an
+        # `import` statement that the browser rejects with "Cannot use import
+        # statement outside a module", so it is checked as a script instead.
+        # The graphics3d files and the vendored Three.js build are ES modules.
+        # Parsing goes via stdin so the check needs no package-type inference.
         run: |
-          for file in web/*.js web/vendor/*.js; do
-            echo "checking ${file}"
+          echo "checking web/app.js (classic script)"
+          node --input-type=commonjs --check < web/app.js
+          for file in web/graphics3d*.js web/vendor/*.js; do
+            echo "checking ${file} (module)"
             node --input-type=module --check < "${file}"
           done
 
