@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# Axiom developer CLI: one short command for everything this repo runs.
+#
+# Simulation commands forward to the Rust binary (`cargo run -- …`), so their
+# flags and behavior are exactly the crate's own. Development commands use the
+# same invocations as CI and AGENTS.md; this script adds no gates of its own.
+set -euo pipefail
+
+# Resolve symlinks (e.g. the ~/.local/bin link) so ROOT_DIR is the real repo.
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE_PATH" ]; do
+  SOURCE_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+  [ "${SOURCE_PATH#/}" = "$SOURCE_PATH" ] && SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+done
+ROOT_DIR="$(cd "$(dirname "$SOURCE_PATH")/.." && pwd)"
+cd "$ROOT_DIR"
+
+usage() {
+  cat <<'EOF'
+Axiom CLI
+
+usage: axiom [-r] <command> [args]
+
+Simulation (forwards to the Rust binary; -r builds release first):
+  demo                        Compare the three controllers on rough terrain
+  evaluate [CONTROLLER]       Score one controller (feedforward|recurrent|cpg)
+  animate [CONTROLLER] [...]  Terminal replay (--task, --frames, --fps, --checkpoint PATH)
+  evolve [...]                Run evolution (--generations, --population, --steps, --seed, --save PATH)
+  inspect PATH                Summarize a saved checkpoint
+  gui [--port N] [--check]    Serve the replay browser on 127.0.0.1:8787
+
+Development:
+  test [rust|web|site|flask|all]  Test suites; default rust (cargo test --workspace --locked)
+  lint [rust|site|all]            rustfmt --check + clippy -D warnings; default rust
+  fmt                             Apply rustfmt to the workspace
+  coverage                        cargo llvm-cov --workspace --fail-under-lines 80
+  bench [rough]                   Rough-terrain benchmark (release build)
+  bench arm64 [--quick|--full] [--allocations]
+                                  Arm64 rollout benchmark; --allocations switches to the
+                                  instrumented-allocator build (counts, no timings)
+  build                           cargo build --workspace --release --locked
+  verify                          Run the CI Rust job's checks locally, in order
+  site [dev|build|test|lint]      Public site tasks (npm --prefix site …); default dev
+  link                            Symlink this script into ~/.local/bin as `axiom`
+  help                            Show this message
+EOF
+}
+
+step() {
+  printf '\n==> %s\n' "$*"
+}
+
+RUN_PROFILE=""
+if [[ "${1:-}" == "-r" || "${1:-}" == "--release" ]]; then
+  RUN_PROFILE="--release"
+  shift
+fi
+
+COMMAND="${1:-help}"
+if (( $# > 0 )); then shift; fi
+
+# Forward a simulation subcommand to the Rust binary unchanged.
+run_sim() {
+  # shellcheck disable=SC2086  # RUN_PROFILE is empty or a single flag
+  exec cargo run $RUN_PROFILE --locked -- "$COMMAND" "$@"
+}
+
+test_rust()  { cargo test --workspace --locked "$@"; }
+test_web()   { node --test web/tests/*.test.mjs; }
+test_site()  { npm --prefix site test; }
+test_flask() { python -m unittest discover -s tests_python -p 'test_*.py' -v; }
+
+lint_rust() {
+  cargo fmt --all -- --check
+  cargo clippy --workspace --all-targets -- -D warnings
+}
+lint_site() { npm --prefix site run lint; }
+
+bench_arm64() {
+  local features=() mode_given=0 arg
+  for arg in "$@"; do
+    case "$arg" in
+      --quick|--full) mode_given=1 ;;
+      --allocations) features=(--features allocation-counting) ;;
+    esac
+  done
+  local example_args=("$@")
+  if (( ! mode_given )); then
+    example_args=(--quick ${example_args[@]+"${example_args[@]}"})
+  fi
+  exec cargo run --release --locked ${features[@]+"${features[@]}"} \
+    --example arm64_optimization_benchmark -- "${example_args[@]}"
+}
+
+case "$COMMAND" in
+  demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
+    run_sim "$@"
+    ;;
+
+  test)
+    case "${1:-rust}" in
+      rust) shift || true; test_rust "$@" ;;
+      web) test_web ;;
+      site) test_site ;;
+      flask) test_flask ;;
+      all)
+        step "Rust workspace"; test_rust
+        step "Browser logic"; test_web
+        step "Public site"; test_site
+        step "Flask adapter"; test_flask
+        ;;
+      *)
+        # Unrecognized first arg: treat everything as cargo test args,
+        # so `axiom test checkpoint_journey` filters by test name.
+        test_rust "$@"
+        ;;
+    esac
+    ;;
+
+  lint)
+    case "${1:-rust}" in
+      rust) lint_rust ;;
+      site) lint_site ;;
+      all)
+        step "Rust"; lint_rust
+        step "Public site"; lint_site
+        ;;
+      *) echo "unknown lint target: $1 (expected rust|site|all)" >&2; exit 2 ;;
+    esac
+    ;;
+
+  fmt)
+    cargo fmt --all
+    ;;
+
+  coverage)
+    cargo llvm-cov --workspace --fail-under-lines 80
+    ;;
+
+  bench)
+    case "${1:-rough}" in
+      rough) exec cargo run --release --locked --example rough_terrain_benchmark ;;
+      arm64) shift; bench_arm64 "$@" ;;
+      *) echo "unknown benchmark: $1 (expected rough|arm64)" >&2; exit 2 ;;
+    esac
+    ;;
+
+  build)
+    cargo build --workspace --release --locked
+    ;;
+
+  verify)
+    # The CI Rust job's steps in order (.github/workflows/ci.yml), with plain
+    # `cargo test` standing in for the instrumented llvm-cov run; use
+    # `axiom coverage` for the coverage floor itself.
+    step "Format"; cargo fmt --all -- --check
+    step "Clippy"; cargo clippy --workspace --all-targets -- -D warnings
+    step "Test"; cargo test --workspace --locked
+    step "JavaScript syntax"
+    for file in web/*.js web/vendor/*.js; do
+      echo "checking ${file}"
+      node --input-type=module --check < "${file}"
+    done
+    step "Browser logic tests"; test_web
+    step "Animation smoke test"
+    cargo run -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18
+    step "GUI smoke test"; cargo run -- gui --check
+    step "Package dry run"; cargo package --locked
+    step "verify passed"
+    ;;
+
+  site)
+    case "${1:-dev}" in
+      dev) npm --prefix site run dev ;;
+      build) npm --prefix site run build ;;
+      test) test_site ;;
+      lint) lint_site ;;
+      *) echo "unknown site task: $1 (expected dev|build|test|lint)" >&2; exit 2 ;;
+    esac
+    ;;
+
+  link)
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$ROOT_DIR/bin/axiom" "$HOME/.local/bin/axiom"
+    echo "linked $HOME/.local/bin/axiom -> $ROOT_DIR/bin/axiom"
+    case ":$PATH:" in
+      *":$HOME/.local/bin:"*) ;;
+      *) echo "note: ~/.local/bin is not on your PATH; add:"
+         echo '  export PATH="$HOME/.local/bin:$PATH"' ;;
+    esac
+    ;;
+
+  help|-h|--help)
+    usage
+    ;;
+
+  *)
+    echo "unknown command: $COMMAND" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

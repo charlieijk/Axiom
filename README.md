@@ -43,18 +43,30 @@ This rebuild is scoped from the previous Axiom review thread:
 
 ## Quick Start
 
+The [`bin/axiom`](bin/axiom) CLI wraps every command this repo runs. Put it on
+your PATH once with `bin/axiom link` (symlinks into `~/.local/bin`), then:
+
 ```sh
-cargo test --workspace
-cargo run -- demo
-cargo run -- gui
-cargo run -- animate cpg
-cargo run -- evaluate cpg
-cargo run -- evolve --generations 10 --population 32 --steps 180 --save checkpoints/run.json
-cargo run -- inspect checkpoints/run.json
-cargo run -- animate --checkpoint checkpoints/run.json --frames 160 --fps 20
-cargo run --example rough_terrain_benchmark
-cargo run --release --locked --example arm64_optimization_benchmark -- --quick
+axiom test
+axiom demo
+axiom gui
+axiom animate cpg
+axiom evaluate cpg
+axiom evolve --generations 10 --population 32 --steps 180 --save checkpoints/run.json
+axiom inspect checkpoints/run.json
+axiom animate --checkpoint checkpoints/run.json --frames 160 --fps 20
+axiom bench
+axiom bench arm64
+axiom verify
 ```
+
+`axiom help` lists everything, including `lint`, `coverage`, the site tasks,
+and the allocation-counting benchmark variant. Simulation commands forward to
+the Rust binary unchanged (`axiom gui` ≡ `cargo run --locked -- gui`; add `-r`
+for a release build), and the development commands run the same invocations as
+CI — the canonical `cargo` forms remain in [AGENTS.md](AGENTS.md). Installing
+the crate itself (`cargo install --path .`) also yields an `axiom` binary with
+the simulation commands.
 
 `cargo run -- gui` binds `127.0.0.1:8787` and is unauthenticated by intent —
 a single-user local tool. Do not expose it beyond the host; see
