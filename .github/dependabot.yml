@@ -18,6 +18,11 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      python-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   # Site frontend (site/package.json)
   - package-ecosystem: "npm"
