@@ -6,7 +6,14 @@
 # same invocations as CI and AGENTS.md; this script adds no gates of its own.
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve symlinks (e.g. the ~/.local/bin link) so ROOT_DIR is the real repo.
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE_PATH" ]; do
+  SOURCE_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+  [ "${SOURCE_PATH#/}" = "$SOURCE_PATH" ] && SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+done
+ROOT_DIR="$(cd "$(dirname "$SOURCE_PATH")/.." && pwd)"
 cd "$ROOT_DIR"
 
 usage() {
