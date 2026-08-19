@@ -4,7 +4,7 @@ blinker==1.9.0
     # via flask
 certifi==2026.7.22
     # via requests
-charset-normalizer==3.4.9
+charset-normalizer==3.5.1
     # via requests
 click==8.4.2
     # via flask
@@ -23,7 +23,7 @@ markupsafe==3.0.3
     #   flask
     #   jinja2
     #   werkzeug
-requests==2.32.5
+requests==2.34.2
     # via -r requirements-flask.txt
 urllib3==2.7.0
     # via requests
