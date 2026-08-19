@@ -73,7 +73,7 @@ function deferred() {
  * `respond` is the fetch stub: it receives the requested URL and returns the
  * Response-like object (or a promise for one) that the app should see.
  */
-function loadApp({ controls = {}, respond } = {}) {
+function loadApp({ controls = {}, respond, reducedMotion = false } = {}) {
   const document = createDocumentStub();
   const defaults = {
     controller: "cpg",
@@ -87,7 +87,7 @@ function loadApp({ controls = {}, respond } = {}) {
   }
 
   const requests = [];
-  const window = createWindowStub();
+  const window = createWindowStub({ reducedMotion });
   let now = 0;
 
   const context = {
@@ -288,4 +288,57 @@ test("changing a control only refetches when the request key actually changed", 
   app.document.getElementById("task").value = "flat";
   app.document.getElementById("task").dispatch("change");
   assert.equal(app.requests.length, before + 1, "a changed control must trigger exactly one request");
+});
+
+// --- prefers-reduced-motion -------------------------------------------------
+//
+// The 2D replay is driven by requestAnimationFrame, so the reduced-motion
+// media query cannot be honoured from styles.css -- app.js has to consult it.
+// These pin both directions: that the preference actually suppresses the loop,
+// and that it never becomes a way to lose playback altogether.
+
+test("a reduced-motion visitor gets a still first frame instead of a running loop", async () => {
+  const app = loadApp({ reducedMotion: true });
+  await app.context.fetchReplay();
+
+  app.context.tick(0);
+  app.context.tick(1000);
+
+  assert.equal(app.report().ready, true, "the replay must still load; only the motion is withheld");
+  assert.equal(app.report().frame, 0, "a reduced-motion visitor must not be auto-advanced");
+  assert.equal(app.document.getElementById("play").textContent, "Play");
+});
+
+test("playback autoplays when the visitor expressed no motion preference", async () => {
+  const app = loadApp();
+  await app.context.fetchReplay();
+
+  app.context.tick(0);
+  app.context.tick(1000);
+
+  assert.ok(app.report().frame > 0, "the default is still an autoplaying replay");
+  assert.equal(app.document.getElementById("play").textContent, "Pause");
+});
+
+test("the play button is labelled for the motion preference before the first replay lands", () => {
+  // index.html ships the autoplay label, so a reduced-motion visitor would read
+  // "Pause" over a still canvas until the first fetch resolved. Asserted
+  // synchronously, before the load-time request has settled.
+  assert.equal(
+    loadApp({ reducedMotion: true }).document.getElementById("play").textContent,
+    "Play",
+  );
+  assert.equal(loadApp().document.getElementById("play").textContent, "Pause");
+});
+
+test("a reduced-motion visitor can still start playback by hand", async () => {
+  const app = loadApp({ reducedMotion: true });
+  await app.context.fetchReplay();
+
+  app.document.getElementById("play").dispatch("click");
+  app.context.tick(0);
+  app.context.tick(1000);
+
+  assert.ok(app.report().frame > 0, "the preference suppresses autoplay, it does not disable Play");
+  assert.equal(app.document.getElementById("play").textContent, "Pause");
 });
