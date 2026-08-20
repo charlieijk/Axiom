@@ -4,9 +4,14 @@ Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neu
 
 Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
 
-## Arm64 Optimization Challenge
+## Arm64 optimization
 
-Axiom is entered in **Track 1 — Physical AI**: simulated sensor observations
+This work was built for the **Arm Create: AI Optimization Challenge**
+(Track 1 — Physical AI), submitted August 2026. That challenge has since
+closed; the optimization, the measurements, and the reproduction protocol
+below are kept because they stand on their own.
+
+The track fit the project as it already was: simulated sensor observations
 drive neural-controller inference, actuator commands, embodied motion, fitness,
 and MAP-Elites selection in one deterministic loop.
 
@@ -16,13 +21,14 @@ workload used **94.38% fewer allocation/reallocation calls** and requested
 **89.73% fewer allocation bytes**, while the complete evolution report remained
 identical to the pre-optimization baseline. See the reproducible protocol, raw
 JSON, source hashes, and limitations in
-[docs/ARM64_OPTIMIZATION.md](docs/ARM64_OPTIMIZATION.md). The curated screenshot
-sequence and sub-three-minute recording plan are in
+[docs/ARM64_OPTIMIZATION.md](docs/ARM64_OPTIMIZATION.md). The screenshot sequence and
+recording plan prepared for the submission are in
 [docs/SUBMISSION_ASSETS.md](docs/SUBMISSION_ASSETS.md).
 
-Arm64 judges can run the copy-paste quick verification and inspect its expected
-semantic digest in the
-[Arm64 judge quick check](docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check).
+Anyone on Arm64 can reproduce this with the copy-paste quick verification and
+check the result against its expected semantic digest — written for the
+challenge's judges, and still the fastest way to confirm the claim:
+[Arm64 quick check](docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check).
 Apple Silicon release usage and the source-build fallback are documented in
 [docs/APPLE_SILICON.md](docs/APPLE_SILICON.md).
 
