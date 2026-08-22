@@ -2,6 +2,7 @@ version: 2
 updates:
   # Rust workspace (root Cargo.toml + crates/axiom-field)
   - package-ecosystem: "cargo"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
@@ -14,6 +15,7 @@ updates:
 
   # Flask shim (requirements-flask.txt + requirements-flask-lock.txt)
   - package-ecosystem: "pip"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
@@ -26,6 +28,7 @@ updates:
 
   # Site frontend (site/package.json)
   - package-ecosystem: "npm"
+    open-pull-requests-limit: 0
     directory: "/site"
     schedule:
       interval: "weekly"
