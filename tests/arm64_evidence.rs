@@ -37,10 +37,13 @@ fn checked_in_arm64_comparison_matches_raw_artifacts() {
         optimized["environment"]["cargo_lock_sha256"]
     );
     if repository_checkout() {
+        let baseline_lock = format!("{BASELINE_REVISION}:Cargo.lock");
+        let bytes = git_output(&["show", &baseline_lock])
+            .unwrap_or_else(|| panic!("baseline Git object should exist: {baseline_lock}"));
         assert_eq!(
             optimized["environment"]["cargo_lock_sha256"],
-            sha256(Path::new("Cargo.lock")),
-            "checked-in evidence is stale for Cargo.lock"
+            sha256_bytes(&bytes),
+            "checked-in evidence does not match the recorded baseline lockfile"
         );
     }
 

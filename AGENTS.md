@@ -8,9 +8,9 @@ Axiom evolves body plans and neural controllers across terrain tasks, preserving
 
 ## Stack
 
-- Rust edition 2024; MSRV 1.85 for the publishable `axiom` crate and 1.87 for `axiom-field`
+- Rust edition 2024; MSRV 1.85 for the publishable `axiom` crate and 1.89 for `axiom-field`
 - Serde 1 and serde_json 1 for persisted experiment and replay data
-- Rapier 3D 0.32 and TOML 0.9 in the non-publishable Field Lab crate
+- Rapier 3D 0.34 and TOML 1.1 in the non-publishable Field Lab crate
 - Browser-native JavaScript with Three.js r165 for the embedded replay viewer
 - Node.js 22.13.0 or newer, React 19.2.6, TypeScript 5.9.3, Vite 8.0.13, and Vinext 1.0.0-beta.2 for `site/`
 - Python 3.10 or newer with Flask 3.1.3 and Requests 2.32.5 for the optional loopback compatibility adapter
