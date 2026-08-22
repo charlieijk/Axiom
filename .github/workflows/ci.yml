@@ -172,6 +172,36 @@ jobs:
       - name: Test loopback and proxy boundaries
         run: python -m unittest discover -s tests_python -p 'test_*.py' -v
 
+  duckdb:
+    name: DuckDB Parquet export
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # The export is a read layer over checkpoints, so the gate needs the
+      # binary that writes them: the tests generate real runs rather than
+      # asserting against a committed fixture that could drift from the format.
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-duckdb.txt
+
+      - name: Install locked dependencies
+        run: pip install -r requirements-duckdb.txt
+
+      - name: Build the checkpoint writer
+        run: cargo build --release --locked
+
+      - name: Test the export against freshly generated runs
+        run: python -m unittest discover -s tests_python -p 'test_duckdb_export.py' -v
+
   arm64:
     name: Native Arm64 evidence smoke test
     # macOS runners bill at 10.3x the Linux rate ($0.062 vs $0.006 per minute),

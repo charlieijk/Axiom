@@ -33,6 +33,10 @@ checkpoints/
 # that produced them. Re-run the notebook rather than reading a committed file.
 notebooks/results/
 
+# Parquet copies of checkpoint results (regenerate with
+# script/export_checkpoints_parquet.py; see docs/duckdb.md)
+/exports/
+
 # Local release bundles and intermediate visual QA captures
 /release/
 /axiom-current-view.png
