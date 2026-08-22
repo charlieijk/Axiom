@@ -84,13 +84,15 @@ progression. Columns: `run_id`, `seed`, `budget_generations`, `population_size`,
 
 **`run_archive_cells.parquet`** — one row per occupied cell of the run's final
 archive. Columns: `run_id`, `seed`, `budget_generations`, `task`,
-`archive_x_axis`, `archive_y_axis`, `archive_cells`, `cell_x`, `cell_y`,
-`fitness`, `evaluation_steps`, `discovered_generation`, `genome_id`,
-`parent_id`, `mutation_summary`, `controller`, and the behaviour metrics
+`archive_x_axis`, `archive_y_axis`, `archive_width`, `archive_height`,
+`archive_cells`, `cell_x`, `cell_y`, `fitness`, `evaluation_steps`,
+`discovered_generation`, `genome_id`, `parent_id`, `mutation_summary`, `controller`, and the behaviour metrics
 `distance`, `stable_distance`, `jump_height`, `uprightness`, `stability`,
 `body_count`, `actuator_count`, `energy`.
 
-`run_id` is the checkpoint's filename stem, so name checkpoints meaningfully.
+`run_id` is the full checkpoint path returned by DuckDB for the input glob. Both
+exports use that same value as their join/group key, so equal basenames in
+different experiment directories remain distinct runs.
 
 ### On QD-score
 
@@ -194,7 +196,7 @@ same value the current writer stamps — but store the per-generation series und
 `generation_summaries` instead of `history`. `axiom inspect` rejects them, and so
 does the export, loudly:
 
-```
+```text
 export failed: Binder Error: Could not find key "history" in struct
 Candidate Entries: "best_genome", "generation_summaries"
 ```

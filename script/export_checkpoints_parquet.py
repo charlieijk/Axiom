@@ -43,7 +43,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 # search records as it runs; generation numbering starts at 1.
 GENERATIONS_QUERY = """
 SELECT
-    regexp_extract(filename, '([^/\\\\]+)\\.json$', 1) AS run_id,
+    filename                                          AS run_id,
     config.seed                                       AS seed,
     config.generations                                AS budget_generations,
     config.population_size                            AS population_size,
@@ -74,12 +74,14 @@ ORDER BY seed, budget_generations, run_id, generation
 # QD-score is, as SUM(fitness) over these rows.
 ARCHIVE_QUERY = """
 SELECT
-    regexp_extract(filename, '([^/\\\\]+)\\.json$', 1) AS run_id,
+    filename                                          AS run_id,
     config.seed                                       AS seed,
     config.generations                                AS budget_generations,
     config.task                                       AS task,
     checkpoint.report.archive.x_axis                  AS archive_x_axis,
     checkpoint.report.archive.y_axis                  AS archive_y_axis,
+    checkpoint.report.archive.width                   AS archive_width,
+    checkpoint.report.archive.height                  AS archive_height,
     checkpoint.report.archive.width
         * checkpoint.report.archive.height             AS archive_cells,
     elite.cell[1]                                     AS cell_x,

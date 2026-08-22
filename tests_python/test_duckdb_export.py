@@ -55,6 +55,8 @@ EXPECTED_ARCHIVE_SCHEMA = [
     ("task", "VARCHAR"),
     ("archive_x_axis", "VARCHAR"),
     ("archive_y_axis", "VARCHAR"),
+    ("archive_width", "BIGINT"),
+    ("archive_height", "BIGINT"),
     ("archive_cells", "BIGINT"),
     ("cell_x", "BIGINT"),
     ("cell_y", "BIGINT"),
@@ -160,6 +162,29 @@ class DuckDbExportTest(unittest.TestCase):
         )[0][0]
         self.assertEqual(runs, len(SEEDS) * len(BUDGETS))
 
+    def test_same_basename_in_separate_directories_keeps_distinct_run_ids(self) -> None:
+        """The source path, not its basename, identifies a run across a glob."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = next(self.checkpoint_dir.glob("*.json"))
+            for experiment in ("experiment-a", "experiment-b"):
+                destination = root / experiment / "run.json"
+                destination.parent.mkdir()
+                shutil.copyfile(source, destination)
+
+            out_dir = root / "exports"
+            self.exporter.export(str(root / "*" / "*.json"), out_dir)
+            run_ids = self.query(
+                "SELECT DISTINCT run_id FROM read_parquet(?) ORDER BY run_id",
+                [str(out_dir / "run_generations.parquet")],
+            )
+
+            self.assertEqual(len(run_ids), 2)
+            self.assertEqual(
+                {Path(run_id).parent.name for (run_id,) in run_ids},
+                {"experiment-a", "experiment-b"},
+            )
+
     def schema(self, name: str) -> list[tuple[str, str]]:
         """Column names and types, in order, as DuckDB reads the Parquet back."""
         return [
@@ -226,6 +251,16 @@ class DuckDbExportTest(unittest.TestCase):
         for run_id, (occupied, coverage, cells) in recorded.items():
             self.assertEqual(derived[run_id], occupied, run_id)
             self.assertAlmostEqual(coverage, occupied / cells, places=6, msg=run_id)
+
+    def test_archive_dimensions_are_exported_explicitly(self) -> None:
+        rows = self.query(
+            """
+            SELECT DISTINCT archive_width, archive_height, archive_cells
+            FROM read_parquet(?)
+            """,
+            [self.parquet("run_archive_cells")],
+        )
+        self.assertEqual(rows, [(12, 8, 96)])
 
     def test_run_qd_score_matches_the_reported_best_fitness(self) -> None:
         """The best elite in the exported archive is the run's reported best."""
