@@ -29,6 +29,10 @@ __pycache__/
 # Local experiment artifacts
 checkpoints/
 
+# Notebook results: generated measurements, meaningful only next to the code
+# that produced them. Re-run the notebook rather than reading a committed file.
+notebooks/results/
+
 # Local release bundles and intermediate visual QA captures
 /release/
 /axiom-current-view.png
