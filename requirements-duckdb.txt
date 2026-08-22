@@ -1,0 +1,4 @@
+# Read/analytics layer only. Axiom's own persistence is unchanged: runs are
+# written and replayed as versioned JSON checkpoints by the Rust binary, and
+# nothing here is on that path. DuckDB is used to query exported run results.
+duckdb==1.5.5

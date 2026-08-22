@@ -29,6 +29,10 @@ __pycache__/
 # Local experiment artifacts
 checkpoints/
 
+# Parquet copies of checkpoint results (regenerate with
+# script/export_checkpoints_parquet.py; see docs/duckdb.md)
+/exports/
+
 # Local release bundles and intermediate visual QA captures
 /release/
 /axiom-current-view.png
