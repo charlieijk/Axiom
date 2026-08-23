@@ -2,8 +2,8 @@
 name = "axiom-field"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.87"
-description = "Rigid-body field lab: a fixed hobby-servo quadruped modelled for sim-to-real transfer."
+rust-version = "1.89"
+description = "Rigid-body simulation of a fixed hobby-servo quadruped for software-only experiments."
 license = "MIT"
 publish = false
 
@@ -11,5 +11,5 @@ publish = false
 axiom = { path = "../.." }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.9"
-rapier3d = { version = "0.32", features = ["enhanced-determinism"] }
+toml = "1.1"
+rapier3d = { version = "0.34", features = ["enhanced-determinism"] }

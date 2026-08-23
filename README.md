@@ -110,6 +110,15 @@ cargo run -- animate --checkpoint checkpoints/run-42.json --frames 160 --fps 20
 
 Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error.
 
+To compare many runs at once — archive coverage, QD-score, and best fitness across seeds and generation budgets — export the checkpoints to Parquet and query them with DuckDB. The checkpoint format is unchanged; the export is a read-only columnar copy:
+
+```sh
+pip install -r requirements-duckdb.txt
+python script/export_checkpoints_parquet.py
+```
+
+See [docs/duckdb.md](docs/duckdb.md) for the schema and a worked cross-seed comparison.
+
 The `animate` command provides a terminal replay renderer over the same simulation loop:
 
 ```sh
