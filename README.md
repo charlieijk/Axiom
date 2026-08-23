@@ -1,5 +1,7 @@
 # Axiom
 
+> A Rust quality-diversity sandbox for evolving bodies and neural controllers.
+
 Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neural controllers across terrain tasks, then keeps diverse elites in a MAP-Elites archive instead of collapsing everything to one winner.
 
 Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
