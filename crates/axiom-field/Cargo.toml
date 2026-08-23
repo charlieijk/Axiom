@@ -3,7 +3,7 @@ name = "axiom-field"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
-description = "Rigid-body field lab: a fixed hobby-servo quadruped modelled for sim-to-real transfer."
+description = "Rigid-body simulation of a fixed hobby-servo quadruped for software-only experiments."
 license = "MIT"
 publish = false
 

@@ -12,8 +12,8 @@ Axiom evolves body plans and neural controllers across terrain tasks, preserving
 - Serde 1 and serde_json 1 for persisted experiment and replay data
 - Rapier 3D 0.34 and TOML 1.1 in the non-publishable Field Lab crate
 - Browser-native JavaScript with Three.js r165 for the embedded replay viewer
-- Node.js 22.13.0 or newer, React 19.2.6, TypeScript 5.9.3, Vite 8.0.13, and Vinext 1.0.0-beta.2 for `site/`
-- Python 3.10 or newer with Flask 3.1.3 and Requests 2.32.5 for the optional loopback compatibility adapter
+- Node.js 22.13.0 or newer, React 19.2.8, TypeScript 5.9.3, Vite 8.2.1, and Vinext 1.0.0-beta.8 for `site/`
+- Python 3.10 or newer with Flask 3.1.3 and Requests 2.34.2 for the optional loopback compatibility adapter
 
 ## Quick start
 
@@ -56,7 +56,7 @@ Rust binary; the table below stays the canonical, CI-verified form.
 | `src/` | Publishable Rust library, CLI, deterministic sandbox, evolution engine, checkpoints, and replay server |
 | `crates/axiom-field/` | Non-publishable rigid-body quadruped simulator and robust-gait search lab |
 | `tests/` | Root-crate integration tests, including the checkpoint CLI journey |
-| `tests_python/` | Flask adapter trust-boundary and proxy tests |
+| `tests_python/` | Flask, notebook, data-export, and documented-claim contracts |
 | `examples/` | Runnable root-crate experiments and benchmarks |
 | `web/` | Browser-native 2D/3D replay clients embedded in the Rust binary, plus Node tests |
 | `site/` | Separate React/Vinext public product site and its tests |
