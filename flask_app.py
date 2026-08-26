@@ -26,7 +26,7 @@ HOP_BY_HOP_HEADERS = {
     "transfer-encoding",
     "upgrade",
 }
-PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+PROXY_METHODS = ["GET", "HEAD"]
 HTTP = requests.Session()
 HTTP.trust_env = False
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -175,6 +175,19 @@ def _response_headers(response: requests.Response) -> list[tuple[str, str]]:
     return headers
 
 
+def _request_has_body() -> bool:
+    """Detect a proxy body while reading at most one byte from an unframed stream."""
+    content_length = request.headers.get("Content-Length")
+    if content_length is not None:
+        try:
+            return int(content_length) != 0
+        except ValueError:
+            return True
+    if "Transfer-Encoding" in request.headers:
+        return True
+    return bool(request.stream.read(1))
+
+
 def create_app(backend_url: str | None = None) -> Flask:
     """Create a Flask reverse proxy without replacing Axiom's Rust authority."""
     upstream = (
@@ -192,9 +205,21 @@ def create_app(backend_url: str | None = None) -> Flask:
             status="ok",
         )
 
-    @app.route("/", defaults={"proxy_path": ""}, methods=PROXY_METHODS)
-    @app.route("/<path:proxy_path>", methods=PROXY_METHODS)
+    @app.route(
+        "/",
+        defaults={"proxy_path": ""},
+        methods=PROXY_METHODS,
+        provide_automatic_options=False,
+    )
+    @app.route(
+        "/<path:proxy_path>",
+        methods=PROXY_METHODS,
+        provide_automatic_options=False,
+    )
     def proxy(proxy_path: str):
+        if _request_has_body():
+            return jsonify(error="Proxy requests must not include a body."), 413
+
         target = upstream + "/" + proxy_path
         if request.query_string:
             target += "?" + request.query_string.decode("latin-1")
@@ -204,7 +229,6 @@ def create_app(backend_url: str | None = None) -> Flask:
             upstream_response = proxy_session.request(
                 method=request.method,
                 url=target,
-                data=request.get_data(cache=False, as_text=False),
                 headers=_request_headers(),
                 allow_redirects=False,
                 stream=True,
