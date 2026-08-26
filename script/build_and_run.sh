@@ -28,24 +28,27 @@ PID_FILE="$RUNTIME_DIR/service.pid"
 LOG_FILE="$RUNTIME_DIR/service.log"
 
 stat_owner() {
-  if stat -f '%u' "$1" 2>/dev/null; then
+  if stat -c '%u' "$1" >/dev/null 2>&1; then
+    stat -c '%u' "$1"
     return
   fi
-  stat -c '%u' "$1"
+  stat -f '%u' "$1"
 }
 
 stat_mode() {
-  if stat -f '%Lp' "$1" 2>/dev/null; then
+  if stat -c '%a' "$1" >/dev/null 2>&1; then
+    stat -c '%a' "$1"
     return
   fi
-  stat -c '%a' "$1"
+  stat -f '%Lp' "$1"
 }
 
 stat_links() {
-  if stat -f '%l' "$1" 2>/dev/null; then
+  if stat -c '%h' "$1" >/dev/null 2>&1; then
+    stat -c '%h' "$1"
     return
   fi
-  stat -c '%h' "$1"
+  stat -f '%l' "$1"
 }
 
 validate_runtime_file() {
