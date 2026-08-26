@@ -95,6 +95,14 @@ See the judge-readable system map and authority boundaries in
 - `evolution.rs` ties evaluation, archive maintenance, and parent selection together.
 - `checkpoint.rs` saves complete, versioned experiment state with atomic replacement.
 
+The workspace also carries `crates/axiom-field`, the Field Lab: a Rapier3D 0.34
+rigid-body simulation (with the `enhanced-determinism` feature) of a fixed
+8-DOF hobby-servo quadruped, where forward motion can only come from joint
+torque acting through foot contact — its own README calls it "the honest
+counterpart to Axiom's own sandbox". Within one binary its runs are
+bit-identical and pinned by golden-trajectory tests; see
+[crates/axiom-field/README.md](crates/axiom-field/README.md).
+
 ## Current Scope
 
 The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; Three.js r165 is bundled for offline use), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. Evolved replays now carry the selected genome's real parent lineage and mutation record rather than inferring ancestry from generation aggregates.
