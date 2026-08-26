@@ -196,9 +196,7 @@ class FlaskProxyTests(unittest.TestCase):
             app = flask_app.create_app("http://127.0.0.1:58110/")
             response = app.test_client().open(
                 "/api/replay?frames=7&mode=minimal",
-                method="POST",
-                data=b'{"seed":19}',
-                content_type="application/json",
+                method="GET",
                 headers={
                     "Connection": "keep-alive, X-Internal",
                     "Keep-Alive": "timeout=5",
@@ -225,12 +223,12 @@ class FlaskProxyTests(unittest.TestCase):
             self.assertFalse(session.trust_env)
             self.assertEqual(len(session.requests), 1)
             forwarded = session.requests[0]
-            self.assertEqual(forwarded["method"], "POST")
+            self.assertEqual(forwarded["method"], "GET")
             self.assertEqual(
                 forwarded["url"],
                 "http://127.0.0.1:58110/api/replay?frames=7&mode=minimal",
             )
-            self.assertEqual(forwarded["data"], b'{"seed":19}')
+            self.assertNotIn("data", forwarded)
             self.assertFalse(forwarded["allow_redirects"])
             self.assertTrue(forwarded["stream"])
             self.assertEqual(forwarded["timeout"], (5, None))
@@ -238,7 +236,6 @@ class FlaskProxyTests(unittest.TestCase):
             forwarded_headers = {
                 name.lower(): value for name, value in forwarded["headers"].items()
             }
-            self.assertEqual(forwarded_headers["content-type"], "application/json")
             self.assertEqual(forwarded_headers["x-trace"], "trace-123")
             for excluded in (
                 "connection",
@@ -253,6 +250,76 @@ class FlaskProxyTests(unittest.TestCase):
             self.assertEqual(upstream.raw.calls, [(64 * 1024, False)])
             self.assertGreaterEqual(upstream.close_calls, 1)
             self.assertGreaterEqual(session.close_calls, 1)
+        finally:
+            response.close()
+
+    def test_proxy_rejects_methods_outside_read_only_contract_without_upstream_use(
+        self,
+    ) -> None:
+        with patch.object(flask_app.requests, "Session") as session_factory:
+            app = flask_app.create_app("http://127.0.0.1:58110")
+            client = app.test_client()
+
+            for method in ("POST", "PUT", "PATCH", "DELETE", "OPTIONS"):
+                with self.subTest(method=method):
+                    response = client.open("/api/replay", method=method)
+                    self.assertEqual(response.status_code, 405)
+
+        session_factory.assert_not_called()
+
+    def test_proxy_rejects_framed_request_body_without_upstream_use(self) -> None:
+        with patch.object(flask_app.requests, "Session") as session_factory:
+            app = flask_app.create_app("http://127.0.0.1:58110")
+            response = app.test_client().get("/api/replay", data=b"x" * 1024)
+
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Proxy requests must not include a body."},
+        )
+        session_factory.assert_not_called()
+
+    def test_proxy_rejects_unframed_body_after_a_single_byte_probe(self) -> None:
+        from io import BytesIO
+
+        from werkzeug.test import EnvironBuilder
+
+        stream = BytesIO(b"body that must not be forwarded")
+        with patch.object(flask_app.requests, "Session") as session_factory:
+            app = flask_app.create_app("http://127.0.0.1:58110")
+            environ = EnvironBuilder(path="/api/replay", method="GET").get_environ()
+            environ.pop("CONTENT_LENGTH", None)
+            environ["wsgi.input"] = stream
+            environ["wsgi.input_terminated"] = True
+            response = app.response_class.from_app(app, environ)
+
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(stream.tell(), 1)
+        session_factory.assert_not_called()
+
+    def test_proxy_preserves_head_without_sending_an_upstream_body(self) -> None:
+        upstream = UpstreamResponse(
+            status_code=200,
+            body=[],
+            headers=[("Content-Type", "text/html"), ("Content-Length", "123")],
+        )
+        session = RecordingSession(response=upstream)
+
+        with patch.object(flask_app.requests, "Session", return_value=session):
+            app = flask_app.create_app("http://127.0.0.1:58110")
+            response = app.test_client().head("/3d?follow=1", headers={"X-Trace": "head"})
+
+        try:
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_data(), b"")
+            self.assertEqual(len(session.requests), 1)
+            forwarded = session.requests[0]
+            self.assertEqual(forwarded["method"], "HEAD")
+            self.assertEqual(
+                forwarded["url"], "http://127.0.0.1:58110/3d?follow=1"
+            )
+            self.assertNotIn("data", forwarded)
+            self.assertEqual(forwarded["headers"]["X-Trace"], "head")
         finally:
             response.close()
 

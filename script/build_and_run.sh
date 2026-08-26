@@ -26,7 +26,85 @@ APP_URL="${AXIOM_URL:-http://127.0.0.1:8787}"
 RUNTIME_DIR="${TMPDIR:-/tmp}/axiom-codex-${UID}"
 PID_FILE="$RUNTIME_DIR/service.pid"
 LOG_FILE="$RUNTIME_DIR/service.log"
-mkdir -p "$RUNTIME_DIR"
+
+stat_owner() {
+  if stat -f '%u' "$1" 2>/dev/null; then
+    return
+  fi
+  stat -c '%u' "$1"
+}
+
+stat_mode() {
+  if stat -f '%Lp' "$1" 2>/dev/null; then
+    return
+  fi
+  stat -c '%a' "$1"
+}
+
+stat_links() {
+  if stat -f '%l' "$1" 2>/dev/null; then
+    return
+  fi
+  stat -c '%h' "$1"
+}
+
+validate_runtime_file() {
+  local path="$1"
+  local label="$2"
+  [[ -L "$path" ]] && {
+    echo "Refusing to use symlinked Axiom $label: $path" >&2
+    exit 1
+  }
+  [[ -e "$path" ]] || return 0
+  [[ -f "$path" ]] || {
+    echo "Refusing to use non-regular Axiom $label: $path" >&2
+    exit 1
+  }
+  [[ "$(stat_owner "$path")" == "$(id -u)" ]] || {
+    echo "Refusing to use Axiom $label owned by another user: $path" >&2
+    exit 1
+  }
+  [[ "$(stat_links "$path")" == "1" ]] || {
+    echo "Refusing to use multiply linked Axiom $label: $path" >&2
+    exit 1
+  }
+  chmod 600 "$path"
+  [[ "$(stat_mode "$path")" == "600" ]] || {
+    echo "Could not make Axiom $label private: $path" >&2
+    exit 1
+  }
+}
+
+secure_runtime_dir() {
+  local previous_umask
+  [[ -L "$RUNTIME_DIR" ]] && {
+    echo "Refusing to use symlinked Axiom runtime directory: $RUNTIME_DIR" >&2
+    exit 1
+  }
+  if [[ ! -e "$RUNTIME_DIR" ]]; then
+    previous_umask="$(umask)"
+    umask 077
+    mkdir "$RUNTIME_DIR"
+    umask "$previous_umask"
+  fi
+  [[ -d "$RUNTIME_DIR" && ! -L "$RUNTIME_DIR" ]] || {
+    echo "Refusing to use non-directory Axiom runtime path: $RUNTIME_DIR" >&2
+    exit 1
+  }
+  [[ "$(stat_owner "$RUNTIME_DIR")" == "$(id -u)" ]] || {
+    echo "Refusing to use Axiom runtime directory owned by another user: $RUNTIME_DIR" >&2
+    exit 1
+  }
+  chmod 700 "$RUNTIME_DIR"
+  [[ "$(stat_mode "$RUNTIME_DIR")" == "700" ]] || {
+    echo "Could not make Axiom runtime directory private: $RUNTIME_DIR" >&2
+    exit 1
+  }
+  validate_runtime_file "$PID_FILE" "PID file"
+  validate_runtime_file "$LOG_FILE" "log file"
+}
+
+secure_runtime_dir
 cd "$ROOT_DIR"
 
 build() {
@@ -34,6 +112,7 @@ build() {
 }
 
 stop_existing() {
+  validate_runtime_file "$PID_FILE" "PID file"
   [[ -f "$PID_FILE" ]] || return 0
   local pid command
   pid="$(cat "$PID_FILE")"
@@ -56,10 +135,17 @@ stop_existing() {
 }
 
 launch() {
+  local previous_umask pid
+  validate_runtime_file "$LOG_FILE" "log file"
+  validate_runtime_file "$PID_FILE" "PID file"
+  previous_umask="$(umask)"
+  umask 077
   : >"$LOG_FILE"
   nohup "$APP_BINARY" gui >>"$LOG_FILE" 2>&1 </dev/null &
-  local pid=$!
+  pid=$!
   printf '%s\n' "$pid" >"$PID_FILE"
+  chmod 600 "$LOG_FILE" "$PID_FILE"
+  umask "$previous_umask"
   echo "Axiom browser GUI starting at $APP_URL (PID $pid; log $LOG_FILE)."
   if [[ "${CODEX_OPEN_BROWSER:-0}" == "1" ]]; then
     /usr/bin/open "$APP_URL"
@@ -68,6 +154,7 @@ launch() {
 
 verify() {
   local pid
+  validate_runtime_file "$PID_FILE" "PID file"
   pid="$(cat "$PID_FILE")"
   for _ in {1..30}; do
     if kill -0 "$pid" 2>/dev/null && curl --fail --silent --output /dev/null "$APP_URL"; then
