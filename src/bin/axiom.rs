@@ -19,6 +19,7 @@ fn main() {
         Some("animate") | Some("replay") => animate(args.collect()),
         Some("inspect") | Some("checkpoint") => inspect_checkpoint(args.collect()),
         Some("gui") | Some("serve") => gui(args.collect()),
+        Some("--version") | Some("-V") => println!("axiom {}", env!("CARGO_PKG_VERSION")),
         Some("help") | Some("--help") | Some("-h") | None => print_help(),
         Some(command) => {
             eprintln!("unknown command: {command}");

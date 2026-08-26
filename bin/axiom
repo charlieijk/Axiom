@@ -23,6 +23,7 @@ Axiom CLI
 usage: axiom [-r] <command> [args]
 
 Simulation (forwards to the Rust binary; -r builds release first):
+  --version                   Print the compiled Axiom version
   demo                        Compare the three controllers on rough terrain
   evaluate [CONTROLLER]       Score one controller (feedforward|recurrent|cpg)
   animate [CONTROLLER] [...]  Terminal replay (--task, --frames, --fps, --checkpoint PATH)
@@ -94,7 +95,7 @@ bench_arm64() {
 }
 
 case "$COMMAND" in
-  demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
+  --version|-V|demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
     run_sim "$@"
     ;;
 

@@ -6,6 +6,21 @@ use std::{
 };
 
 #[test]
+fn cli_reports_the_packaged_version() {
+    let output = Command::new(env!("CARGO_BIN_EXE_axiom"))
+        .arg("--version")
+        .output()
+        .expect("version command should start");
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        concat!("axiom ", env!("CARGO_PKG_VERSION"), "\n")
+    );
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn cli_saves_inspects_and_replays_a_checkpoint() {
     let checkpoint_path = temporary_checkpoint_path();
     let binary = env!("CARGO_BIN_EXE_axiom");

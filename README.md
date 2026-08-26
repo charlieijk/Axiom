@@ -6,6 +6,14 @@ Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neu
 
 Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
 
+## Download
+
+Stable tags publish a native Apple Silicon command-line bundle and SHA-256
+checksum on the [GitHub Releases page](https://github.com/charlieijk/Axiom/releases).
+The executable contains the Rust engine and the loopback-only 2D/3D browser
+interface; it is the product itself, not a sample-data presentation. See the
+[download, checksum, signing, and source-build instructions](docs/APPLE_SILICON.md).
+
 ## Arm64 optimization
 
 This work was built for the **Arm Create: AI Optimization Challenge**
@@ -31,7 +39,7 @@ Anyone on Arm64 can reproduce this with the copy-paste quick verification and
 check the result against its expected semantic digest — written for the
 challenge's judges, and still the fastest way to confirm the claim:
 [Arm64 quick check](docs/ARM64_OPTIMIZATION.md#arm64-judge-quick-check).
-Apple Silicon release usage and the source-build fallback are documented in
+Apple Silicon download usage and the source-build fallback are documented in
 [docs/APPLE_SILICON.md](docs/APPLE_SILICON.md).
 
 ![Axiom's measured Apple M2 Arm64 allocation result](docs/axiom-arm64-result.png)

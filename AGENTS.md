@@ -43,6 +43,7 @@ Rust binary; the table below stays the canonical, CI-verified form.
 | Lint the Rust workspace | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Lint the public site | `npm --prefix site run lint` |
 | Build the Rust release | `cargo build --workspace --release --locked` |
+| Package an Apple Silicon release | `./script/package_release.sh target/release/axiom v0.1.1 aarch64-apple-darwin release` |
 | Build the public site | `npm --prefix site run build` |
 | Smoke-test bundled GUI assets | `cargo run --locked -- gui --check` |
 | Verify the publishable package | `cargo package --locked` |

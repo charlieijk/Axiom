@@ -1,9 +1,39 @@
-# Apple Silicon source build
+# Apple Silicon download and source build
 
 Axiom runs natively on Apple Silicon as an `aarch64-apple-darwin` command-line
 binary and opens its interactive interface through a loopback-only local web
-server. It is not a conventional `.app` bundle, and no prebuilt challenge
-binary is currently published.
+server. It is not a conventional `.app` bundle.
+
+## Download a tagged release
+
+Each stable tag that completes the release workflow publishes a versioned
+archive and a separate SHA-256 checksum on the
+[GitHub Releases page](https://github.com/charlieijk/Axiom/releases). The tag,
+crate version, and compiled binary version must agree before that workflow can
+publish anything. The release page is the source of truth: a version is not
+available as a prebuilt download until both files appear there.
+
+For Axiom 0.1.1 on an Apple Silicon Mac with the GitHub CLI installed:
+
+```sh
+AXIOM_TAG=v0.1.1
+AXIOM_ARCHIVE="axiom-${AXIOM_TAG}-aarch64-apple-darwin.tar.gz"
+gh release download "$AXIOM_TAG" --repo charlieijk/Axiom \
+  --pattern "$AXIOM_ARCHIVE" --pattern "$AXIOM_ARCHIVE.sha256"
+shasum -a 256 -c "$AXIOM_ARCHIVE.sha256"
+tar -xzf "$AXIOM_ARCHIVE"
+"${AXIOM_ARCHIVE%.tar.gz}/axiom" --version
+"${AXIOM_ARCHIVE%.tar.gz}/axiom" gui
+```
+
+Open the loopback address printed by the final command. The archive includes
+the README, security policy, install guide, MIT license, and licenses for the
+browser assets embedded in the executable.
+
+The release binary is built on a native GitHub-hosted Arm64 runner and receives
+an ad-hoc code signature. It is not signed with an Apple Developer ID and is
+not notarized. Organizations that require Developer ID provenance should use
+the source-build path below until a notarized release channel exists.
 
 ## Build and run
 
