@@ -41,3 +41,6 @@ notebooks/results/
 /release/
 /axiom-current-view.png
 /*-pass1.png
+
+# Local agent-environment configuration, not part of the public tree
+/.codex/

@@ -4,14 +4,14 @@
 
 Current judge-facing Archive Lab captures:
 
-- [Generation 12 champion and Archive Lab](docs/axiom-archive-lab-gen12.jpg)
-- [Selected diversity elite in cell 0,7](docs/axiom-archive-elite-cell-0-7.jpg)
-- [Generation 13 after the evolve action](docs/axiom-archive-lab-gen13.jpg)
+- [Generation 12 champion and Archive Lab](../axiom-archive-lab-gen12.jpg)
+- [Selected diversity elite in cell 0,7](../axiom-archive-elite-cell-0-7.jpg)
+- [Generation 13 after the evolve action](../axiom-archive-lab-gen13.jpg)
 
 The following assets document the earlier Search Lineage design and remain as
 comparison history rather than current-interface evidence:
 
-- Source visual truth: [design/axiom-field-journal-source.png](design/axiom-field-journal-source.png)
+- Source visual truth: [design/axiom-field-journal-source.png](../../design/axiom-field-journal-source.png)
 - Browser-rendered implementation: [axiom-field-journal-final.png](axiom-field-journal-final.png)
 - Full-view comparison: [axiom-field-journal-comparison.png](axiom-field-journal-comparison.png)
 - Focused Field Journal comparison: [axiom-field-journal-focus-comparison.png](axiom-field-journal-focus-comparison.png)
