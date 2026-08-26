@@ -14,8 +14,9 @@ fitness function, or the archive in Python.
 https://colab.research.google.com/github/charlieijk/Axiom/blob/main/notebooks/01_quality_diversity.ipynb
 ```
 
-This repository is private, so the first open prompts you to authorize Colab's GitHub integration
-with private-repo access. That same grant is what lets Colab save back.
+This repository is public. Opening and running the notebook requires no GitHub token or
+private-repository authorization. Colab asks for GitHub authorization only when you save a copy
+back; target a branch and open a PR.
 
 **If you use more than one Google account, check which one you are on before authorizing.** The
 GitHub grant attaches to a single Colab account. Open the notebook later under a different account
@@ -28,11 +29,11 @@ account you do this work in.
 Set the runtime to **CPU**. Axiom's simulation is single-threaded Rust; a GPU would sit idle and
 still bill you.
 
-## Credentials
+## GitHub access
 
-A private clone needs a GitHub token. Put it in **Colab Secrets** as `GITHUB_TOKEN` (key icon, left
-sidebar) — never in a cell. The setup cell reads it from there, falls back to a hidden prompt, and
-rewrites the git remote afterwards so the credential is not left behind in `.git/config`.
+Axiom is public. Opening the notebook and cloning the repository use anonymous HTTPS and require no
+GitHub token or private-repository authorization. GitHub authentication is needed only when you use
+Colab's save-to-GitHub flow; save to a branch and open a PR.
 
 ## The Rust toolchain on Colab
 

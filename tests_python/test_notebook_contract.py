@@ -27,19 +27,17 @@ class NotebookContractTest(unittest.TestCase):
             if cell.get("cell_type") == "markdown"
         )
 
-    def test_private_clone_keeps_the_token_out_of_url_and_argv(self) -> None:
-        self.assertNotIn("x-access-token:{token}", self.code)
-        self.assertNotIn("token}@github.com", self.code)
-        self.assertIn("GIT_ASKPASS", self.code)
+    def test_public_clone_is_anonymous_and_uses_an_argument_vector(self) -> None:
+        self.assertNotIn("GITHUB_TOKEN", self.code)
+        self.assertNotIn("GIT_ASKPASS", self.code)
+        self.assertNotIn("getpass", self.code)
         self.assertIn('["git", "clone"', self.code)
-        self.assertIn("GIT_TERMINAL_PROMPT", self.code)
+        self.assertIn('f"https://github.com/{REPO}.git"', self.code)
 
-    def test_private_clone_does_not_surface_git_error_output(self) -> None:
+    def test_public_clone_failure_is_explicit(self) -> None:
         self.assertIn("capture_output=True", self.code)
-        self.assertIn(
-            "git clone failed; check the token scope and repository access", self.code
-        )
-        self.assertIn("arguments, command output, errors", self.markdown)
+        self.assertIn('raise RuntimeError(f"git clone failed ({clone.returncode})")', self.code)
+        self.assertIn("clones it anonymously over HTTPS", self.markdown)
 
     def test_notebook_has_no_saved_outputs(self) -> None:
         for cell in self.document["cells"]:
