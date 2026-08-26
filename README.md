@@ -61,6 +61,7 @@ axiom gui
 axiom animate cpg
 axiom evaluate cpg
 axiom evolve --generations 10 --population 32 --steps 180 --save checkpoints/run.json
+axiom evolve --pack rough-inspection --report-json reports/inspection.json --report-md reports/inspection.md
 axiom inspect checkpoints/run.json
 axiom animate --checkpoint checkpoints/run.json --frames 160 --fps 20
 axiom bench
@@ -107,6 +108,11 @@ cargo run -- evolve --generations 16 --population 32 --steps 180 --seed 42 --sav
 cargo run -- inspect checkpoints/run-42.json
 cargo run -- animate --checkpoint checkpoints/run-42.json --frames 160 --fps 20
 ```
+
+For a deterministic inspection across rough terrain, tilt recovery, and a step
+field, pass `--pack rough-inspection`. `--report-json` and `--report-md` write
+human- and machine-readable summaries without replacing the complete,
+versioned checkpoint.
 
 Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error.
 

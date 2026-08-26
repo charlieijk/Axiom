@@ -7,6 +7,7 @@ use crate::genome::{Genome, NeuralGenome, controller_input_count};
 use crate::policy::ControllerKind;
 use crate::qd::{Archive, Axis, Elite};
 use crate::rng::Rng;
+use crate::task_pack::{TaskPackKind, evaluate_pack};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SearchMode {
@@ -133,6 +134,20 @@ impl TrackedGenome {
 }
 
 pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, EvolutionConfigError> {
+    run_evolution_internal(config, None)
+}
+
+pub fn run_evolution_with_pack(
+    config: EvolutionConfig,
+    pack: TaskPackKind,
+) -> Result<EvolutionReport, EvolutionConfigError> {
+    run_evolution_internal(config, Some(pack))
+}
+
+fn run_evolution_internal(
+    config: EvolutionConfig,
+    task_pack: Option<TaskPackKind>,
+) -> Result<EvolutionReport, EvolutionConfigError> {
     config.validate()?;
 
     let mut rng = Rng::new(config.seed);
@@ -167,7 +182,7 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     );
     let mut best_genome = population[0].genome.clone();
     let mut best_genome_id = population[0].genome_id;
-    let mut best_evaluation = evaluate(&best_genome, config.task, config.evaluation_steps);
+    let mut best_evaluation = evaluate_for_config(&best_genome, &config, task_pack);
     let mut history = Vec::with_capacity(config.generations);
     let mut evaluated_count = 0;
 
@@ -175,7 +190,7 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
         let current_population = std::mem::take(&mut population);
         let mut scored = Vec::with_capacity(current_population.len());
         for tracked in current_population {
-            let evaluation = evaluate(&tracked.genome, config.task, config.evaluation_steps);
+            let evaluation = evaluate_for_config(&tracked.genome, &config, task_pack);
             evaluated_count += 1;
             if evaluation.fitness > best_evaluation.fitness {
                 best_genome = tracked.genome.clone();
@@ -264,6 +279,17 @@ pub fn run_evolution(config: EvolutionConfig) -> Result<EvolutionReport, Evoluti
     })
 }
 
+fn evaluate_for_config(
+    genome: &Genome,
+    config: &EvolutionConfig,
+    task_pack: Option<TaskPackKind>,
+) -> Evaluation {
+    match task_pack {
+        Some(pack) => evaluate_pack(genome, pack, config.evaluation_steps).as_evaluation(),
+        None => evaluate(genome, config.task, config.evaluation_steps),
+    }
+}
+
 fn lineage_record(tracked: &TrackedGenome) -> LineageRecord {
     LineageRecord {
         genome_id: tracked.genome_id,
@@ -348,9 +374,9 @@ fn force_controller(genome: &mut Genome, controller: ControllerKind, rng: &mut R
 
 #[cfg(test)]
 mod tests {
-    use crate::policy::ControllerKind;
+    use crate::{TaskPackKind, policy::ControllerKind};
 
-    use super::{EvolutionConfig, SearchMode, run_evolution};
+    use super::{EvolutionConfig, SearchMode, run_evolution, run_evolution_with_pack};
 
     #[test]
     fn evolution_produces_archive_and_best_creature() {
@@ -379,6 +405,23 @@ mod tests {
         .expect_err("zero population should be rejected");
 
         assert_eq!(error.to_string(), "population must be greater than zero");
+    }
+
+    #[test]
+    fn evolution_can_evaluate_the_rough_inspection_pack() {
+        let report = run_evolution_with_pack(
+            EvolutionConfig {
+                population_size: 5,
+                generations: 1,
+                evaluation_steps: 20,
+                ..EvolutionConfig::default()
+            },
+            TaskPackKind::RoughInspection,
+        )
+        .expect("valid pack config should run");
+
+        assert!(report.best_evaluation.fitness.is_finite());
+        assert!(report.best_evaluation.steps > 20);
     }
 
     fn small_run(seed: u64) -> super::EvolutionReport {

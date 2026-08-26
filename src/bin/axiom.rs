@@ -1,11 +1,12 @@
 use axiom::{
-    EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind,
+    EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind, TaskPackKind,
     animation::{TerminalAnimationConfig, play_terminal_animation},
     checkpoint::{load_checkpoint, save_checkpoint},
-    evolution::run_evolution,
+    evolution::{run_evolution, run_evolution_with_pack},
     fitness::evaluate,
     policy::ControllerKind,
     rng::Rng,
+    save_report_json, save_report_markdown,
     web::{GuiConfig, gui_smoke_check, serve_gui},
 };
 
@@ -72,7 +73,10 @@ fn evaluate_once(controller: Option<&str>) {
 
 fn evolve(args: Vec<String>) {
     let mut config = EvolutionConfig::default();
+    let mut task_pack = None;
     let mut save_path = None;
+    let mut report_json_path = None;
+    let mut report_markdown_path = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -85,6 +89,21 @@ fn evolve(args: Vec<String>) {
             "--steps" => {
                 config.evaluation_steps = parse_next(&args, &mut index, "steps");
             }
+            "--task" => {
+                let value: String = parse_next(&args, &mut index, "task");
+                config.task = parse_task(&value).unwrap_or_else(|| {
+                    eprintln!("unknown task: {value}");
+                    std::process::exit(2);
+                });
+                task_pack = None;
+            }
+            "--pack" => {
+                let value: String = parse_next(&args, &mut index, "pack");
+                task_pack = Some(TaskPackKind::parse(&value).unwrap_or_else(|| {
+                    eprintln!("unknown task pack: {value}");
+                    std::process::exit(2);
+                }));
+            }
             "--classic" => {
                 config.search_mode = SearchMode::Classic;
             }
@@ -94,6 +113,17 @@ fn evolve(args: Vec<String>) {
             "--save" | "--checkpoint" => {
                 save_path = Some(parse_next::<String>(&args, &mut index, "checkpoint path"));
             }
+            "--report-json" => {
+                report_json_path =
+                    Some(parse_next::<String>(&args, &mut index, "JSON report path"));
+            }
+            "--report-md" => {
+                report_markdown_path = Some(parse_next::<String>(
+                    &args,
+                    &mut index,
+                    "Markdown report path",
+                ));
+            }
             other => {
                 eprintln!("unknown evolve option: {other}");
                 std::process::exit(2);
@@ -102,7 +132,11 @@ fn evolve(args: Vec<String>) {
         index += 1;
     }
 
-    let report = run_evolution(config.clone()).unwrap_or_else(|error| {
+    let report = match task_pack {
+        Some(pack) => run_evolution_with_pack(config.clone(), pack),
+        None => run_evolution(config.clone()),
+    }
+    .unwrap_or_else(|error| {
         eprintln!("evolution failed: {error}");
         std::process::exit(2);
     });
@@ -130,6 +164,22 @@ fn evolve(args: Vec<String>) {
         report.archive.coverage() * 100.0
     );
     println!("lineage records: {}", report.lineage.len());
+
+    if let Some(path) = report_json_path {
+        save_report_json(&path, &config, task_pack, &report).unwrap_or_else(|error| {
+            eprintln!("failed to save JSON report {path}: {error}");
+            std::process::exit(1);
+        });
+        println!("saved JSON report: {path}");
+    }
+
+    if let Some(path) = report_markdown_path {
+        save_report_markdown(&path, &config, task_pack, &report).unwrap_or_else(|error| {
+            eprintln!("failed to save Markdown report {path}: {error}");
+            std::process::exit(1);
+        });
+        println!("saved Markdown report: {path}");
+    }
 
     if let Some(path) = save_path {
         let checkpoint = EvolutionCheckpoint::from_report(config, report);
@@ -324,6 +374,8 @@ fn print_help() {
            axiom animate --checkpoint PATH [--task flat|rough|recovery] [--frames N] [--fps N]\n\
            axiom inspect PATH\n\
            axiom gui [--host HOST] [--port PORT] [--check]\n\
-           axiom evolve [--generations N] [--population N] [--steps N] [--classic] [--seed N] [--save PATH]\n"
+           axiom evolve [--task flat|rough|recovery] [--pack rough-inspection]\n\
+                        [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n\
+                        [--save PATH] [--report-json PATH] [--report-md PATH]\n"
     );
 }
