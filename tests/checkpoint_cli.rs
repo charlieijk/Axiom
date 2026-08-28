@@ -8,6 +8,7 @@ use std::{
 #[test]
 fn cli_saves_inspects_and_replays_a_checkpoint() {
     let checkpoint_path = temporary_checkpoint_path();
+    let handoff_path = checkpoint_path.with_extension("shortlist.json");
     let binary = env!("CARGO_BIN_EXE_axiom");
 
     let evolve = Command::new(binary)
@@ -56,7 +57,68 @@ fn cli_saves_inspects_and_replays_a_checkpoint() {
     );
     assert!(String::from_utf8_lossy(&replay.stdout).contains("time"));
 
+    let handoff = Command::new(binary)
+        .arg("handoff")
+        .arg(&checkpoint_path)
+        .arg("--output")
+        .arg(&handoff_path)
+        .output()
+        .expect("candidate handoff should start");
+    assert!(
+        handoff.status.success(),
+        "handoff failed: {}",
+        String::from_utf8_lossy(&handoff.stderr)
+    );
+    let handoff_json = fs::read_to_string(&handoff_path).expect("handoff JSON should exist");
+    let handoff_value: serde_json::Value =
+        serde_json::from_str(&handoff_json).expect("handoff should be valid JSON");
+    assert_eq!(
+        handoff_value["schema_version"],
+        "axiom.candidate-shortlist.v1"
+    );
+    assert_eq!(handoff_value["source"]["seed"], 71);
+    let candidates = handoff_value["candidates"]
+        .as_array()
+        .expect("handoff should contain candidates");
+    assert!(!candidates.is_empty());
+    assert!(
+        candidates[0]["roles"]
+            .as_array()
+            .is_some_and(|roles| roles.iter().any(|role| role == "champion"))
+    );
+    assert!(candidates[0]["genome"]["body"]["nodes"].is_array());
+    assert!(
+        handoff_value["limitations"]
+            .as_array()
+            .is_some_and(|items| {
+                items
+                    .iter()
+                    .any(|item| item.as_str().is_some_and(|text| text.contains("hardware")))
+            })
+    );
+
+    let destructive_handoff = Command::new(binary)
+        .arg("handoff")
+        .arg(&checkpoint_path)
+        .arg("--output")
+        .arg(&checkpoint_path)
+        .output()
+        .expect("same-path handoff should start");
+    assert!(!destructive_handoff.status.success());
+    assert!(
+        String::from_utf8_lossy(&destructive_handoff.stderr)
+            .contains("must differ from the checkpoint")
+    );
+
+    let inspect_after_refusal = Command::new(binary)
+        .arg("inspect")
+        .arg(&checkpoint_path)
+        .output()
+        .expect("checkpoint should remain readable after refused handoff");
+    assert!(inspect_after_refusal.status.success());
+
     fs::remove_file(checkpoint_path).expect("test checkpoint should be removable");
+    fs::remove_file(handoff_path).expect("test handoff should be removable");
 }
 
 #[test]

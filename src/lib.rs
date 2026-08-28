@@ -3,6 +3,7 @@ pub mod checkpoint;
 pub mod evolution;
 pub mod fitness;
 pub mod genome;
+pub mod handoff;
 pub mod math;
 pub mod network;
 pub mod policy;
@@ -20,6 +21,7 @@ pub use evolution::{
 };
 pub use fitness::{Evaluation, TaskKind, evaluate};
 pub use genome::{BodyGenome, Genome};
+pub use handoff::{CandidateShortlist, save_candidate_shortlist};
 pub use policy::{Brain, BrainState, ControllerKind};
 pub use qd::{Archive, Axis, AxisSpec, Grid};
 pub use report::{render_report_markdown, save_report_json, save_report_markdown};

@@ -5,6 +5,8 @@
 ## What this is
 
 Axiom evolves body plans and neural controllers across terrain tasks, preserving diverse elites in a MAP-Elites archive rather than selecting only one winner. The root crate owns the deterministic simulation, evaluation, evolution, checkpoints, CLI, and replay server. `crates/axiom-field/` adds a rigid-body quadruped lab for robust-gait experiments, while `web/` and `site/` provide distinct browser surfaces over the project.
+The versioned candidate-handoff command selects champion, stable, explorer, and lean archive
+members with their complete genomes for downstream creature-design workflows.
 
 ## Stack
 
@@ -33,6 +35,7 @@ Rust binary; the table below stays the canonical, CI-verified form.
 | --- | --- |
 | Install site dependencies | `npm --prefix site ci` |
 | Run the Rust GUI | `cargo run --locked -- gui` |
+| Export a creature shortlist | `cargo run --locked -- handoff checkpoints/run.json --output exports/shortlist.json` |
 | Run the public site | `npm --prefix site run dev` |
 | Test the Rust workspace | `cargo test --workspace --locked` |
 | Measure Rust coverage | `cargo llvm-cov --workspace --fail-under-lines 80` |

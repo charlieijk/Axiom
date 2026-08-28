@@ -1,12 +1,15 @@
+use std::path::{Path, PathBuf};
+
 use axiom::{
-    EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind, TaskPackKind,
+    CandidateShortlist, EvolutionCheckpoint, EvolutionConfig, Genome, SearchMode, TaskKind,
+    TaskPackKind,
     animation::{TerminalAnimationConfig, play_terminal_animation},
     checkpoint::{load_checkpoint, save_checkpoint},
     evolution::{run_evolution, run_evolution_with_pack},
     fitness::evaluate,
     policy::ControllerKind,
     rng::Rng,
-    save_report_json, save_report_markdown,
+    save_candidate_shortlist, save_report_json, save_report_markdown,
     web::{GuiConfig, gui_smoke_check, serve_gui},
 };
 
@@ -18,6 +21,7 @@ fn main() {
         Some("evolve") => evolve(args.collect()),
         Some("animate") | Some("replay") => animate(args.collect()),
         Some("inspect") | Some("checkpoint") => inspect_checkpoint(args.collect()),
+        Some("handoff") | Some("shortlist") => handoff(args.collect()),
         Some("gui") | Some("serve") => gui(args.collect()),
         Some("help") | Some("--help") | Some("-h") | None => print_help(),
         Some(command) => {
@@ -297,6 +301,72 @@ fn inspect_checkpoint(args: Vec<String>) {
     );
 }
 
+fn handoff(args: Vec<String>) {
+    let Some(checkpoint_path) = args.first() else {
+        eprintln!("missing checkpoint path");
+        std::process::exit(2);
+    };
+    let mut output_path = None;
+    let mut index = 1;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--output" | "-o" => {
+                output_path = Some(parse_next::<String>(&args, &mut index, "output path"));
+            }
+            other => {
+                eprintln!("unknown handoff option: {other}");
+                std::process::exit(2);
+            }
+        }
+        index += 1;
+    }
+    let output_path = output_path.unwrap_or_else(|| {
+        eprintln!("missing --output path");
+        std::process::exit(2);
+    });
+    if same_path(checkpoint_path, &output_path).unwrap_or_else(|error| {
+        eprintln!("failed to validate handoff paths: {error}");
+        std::process::exit(2);
+    }) {
+        eprintln!("handoff output must differ from the checkpoint path");
+        std::process::exit(2);
+    }
+    let checkpoint = load_checkpoint(checkpoint_path).unwrap_or_else(|error| {
+        eprintln!("failed to load checkpoint {checkpoint_path}: {error}");
+        std::process::exit(1);
+    });
+    let shortlist = CandidateShortlist::from_checkpoint(&checkpoint).unwrap_or_else(|error| {
+        eprintln!("failed to build candidate shortlist: {error}");
+        std::process::exit(1);
+    });
+    save_candidate_shortlist(&output_path, &shortlist).unwrap_or_else(|error| {
+        eprintln!("failed to save candidate shortlist {output_path}: {error}");
+        std::process::exit(1);
+    });
+    println!(
+        "saved {} downstream candidates: {output_path}",
+        shortlist.candidates.len()
+    );
+}
+
+fn same_path(left: impl AsRef<Path>, right: impl AsRef<Path>) -> std::io::Result<bool> {
+    Ok(resolved_path(left.as_ref())? == resolved_path(right.as_ref())?)
+}
+
+fn resolved_path(path: &Path) -> std::io::Result<PathBuf> {
+    if path.exists() {
+        return path.canonicalize();
+    }
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let file_name = path.file_name().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no file name")
+    })?;
+    Ok(parent.canonicalize()?.join(file_name))
+}
+
 fn gui(args: Vec<String>) {
     let mut config = GuiConfig::default();
     let mut index = 0;
@@ -373,6 +443,7 @@ fn print_help() {
            axiom animate [feedforward|recurrent|cpg] [--task flat|rough|recovery] [--frames N] [--fps N]\n\
            axiom animate --checkpoint PATH [--task flat|rough|recovery] [--frames N] [--fps N]\n\
            axiom inspect PATH\n\
+           axiom handoff CHECKPOINT --output PATH\n\
            axiom gui [--host HOST] [--port PORT] [--check]\n\
            axiom evolve [--task flat|rough|recovery] [--pack rough-inspection]\n\
                         [--generations N] [--population N] [--steps N] [--classic] [--seed N]\n\
