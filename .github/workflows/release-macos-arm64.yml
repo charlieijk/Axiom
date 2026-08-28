@@ -9,8 +9,17 @@ permissions:
   contents: write
 
 jobs:
+  # The tag push that starts this workflow matches no branch filter, so CI
+  # would never have run on the commit being released. Calling it here — and
+  # requiring it below — is what makes the published archive one that the
+  # suite, the MSRV check and the dependency audit all passed.
+  verify:
+    name: Verify before publishing
+    uses: ./.github/workflows/ci.yml
+
   release:
     name: Build Apple Silicon preview
+    needs: verify
     runs-on: macos-15
 
     steps:

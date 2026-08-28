@@ -5,6 +5,9 @@ name: CI
     branches:
       - main
   pull_request:
+  # Callable so the release workflow can require this exact gate before it
+  # publishes; `needs:` cannot reach across workflow files.
+  workflow_call:
 
 permissions:
   contents: read
