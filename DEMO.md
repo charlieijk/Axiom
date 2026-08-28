@@ -19,10 +19,13 @@ controller, terrain, archive position, and replay stay connected.
    Lab, journal, and timeline updating from the Rust backend together.
 5. Use [the core-loop map](docs/axiom-core-loop.png) to trace observation
    → brain → action → simulation → fitness → MAP-Elites.
-6. Open [docs/ARM64_OPTIMIZATION.md](docs/ARM64_OPTIMIZATION.md), connect the
+6. Save a checkpoint, then run `axiom handoff CHECKPOINT --output shortlist.json`.
+   Show the full genomes selected as champion, stable, explorer, and lean candidates—the bridge
+   from an experiment archive to creature design in another runtime.
+7. Open [docs/ARM64_OPTIMIZATION.md](docs/ARM64_OPTIMIZATION.md), connect the
    reusable buffers to the two measured allocation results, and show the full
    report SHA-256 correctness gate. State that runtime speedup is not claimed.
-7. Close on the moving creature: allocator traffic fell without changing the
+8. Close on the moving creature: allocator traffic fell without changing the
    experiment's result.
 
 The exact shot sequence, captions, timed narration, and recording checklist are

@@ -64,6 +64,7 @@ axiom evolve --generations 10 --population 32 --steps 180 --save checkpoints/run
 axiom evolve --pack rough-inspection --report-json reports/inspection.json --report-md reports/inspection.md
 axiom inspect checkpoints/run.json
 axiom animate --checkpoint checkpoints/run.json --frames 160 --fps 20
+axiom handoff checkpoints/run.json --output exports/candidate-shortlist.json
 axiom bench
 axiom bench arm64
 axiom verify
@@ -94,6 +95,7 @@ See the judge-readable system map and authority boundaries in
 - `qd.rs` implements MAP-Elites archive insertion, replacement, and sampling.
 - `evolution.rs` ties evaluation, archive maintenance, and parent selection together.
 - `checkpoint.rs` saves complete, versioned experiment state with atomic replacement.
+- `handoff.rs` turns archive diversity into a versioned, downstream-importable creature shortlist.
 
 ## Current Scope
 
@@ -115,6 +117,18 @@ human- and machine-readable summaries without replacing the complete,
 versioned checkpoint.
 
 Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error.
+
+Move from an experiment to downstream creature design with a deterministic shortlist:
+
+```sh
+cargo run -- handoff checkpoints/run-42.json --output exports/run-42-shortlist.json
+```
+
+The `axiom.candidate-shortlist.v1` document preserves each selected genome and evaluation while
+assigning practical roles: champion, stable, explorer, and lean. One genome may fill several
+roles. The handoff carries the checkpoint seed, archive context, selection policy, and explicit
+software-only / no-hardware-validation limitations; it does not claim engine-specific import or
+sim-to-real readiness.
 
 To compare many runs at once — archive coverage, QD-score, and best fitness across seeds and generation budgets — export the checkpoints to Parquet and query them with DuckDB. The checkpoint format is unchanged; the export is a read-only columnar copy:
 
