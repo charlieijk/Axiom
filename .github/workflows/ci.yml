@@ -283,3 +283,83 @@ jobs:
           name: arm64-quick-evidence
           path: ${{ runner.temp }}/axiom-arm64-evidence/arm64-quick-*.json
           if-no-files-found: error
+
+  readiness-evidence:
+    name: Readiness claims resolve to evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # The evidence rule from steward (charlieijk/fleet-steward), inlined.
+      # steward is a private repository, so a step that installed it would
+      # trade a short check for a token every repo would then need. steward
+      # remains the full linter — canonical wording, ordering, section order —
+      # and the fleet sweep still runs it. This gate enforces the one rule that
+      # keeps regressing: a claim whose evidence is named in prose backticks,
+      # which nothing can follow, so it reads as substantiated while nothing
+      # checks it.
+      - name: Every ticked readiness claim links to evidence that resolves
+        shell: bash
+        run: |
+          python3 - <<'CHECK'
+          import re, sys
+          from pathlib import Path
+          from urllib.parse import unquote, urlsplit
+
+          TICK = re.compile(r"^- \[[xX]\] \*\*(.+?)\*\*")
+          LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+[^)]*)?\)")
+          HEAD = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+          slug = lambda v: re.sub(r"\s+", "-", re.sub(r"[^\w\- ]", "", v.strip().casefold()))
+          root = Path(".").resolve()
+          agents = root / "AGENTS.md"
+
+          def resolves(target):
+              p = urlsplit(target)
+              if p.scheme or p.netloc or p.query:
+                  return False
+              rel = unquote(p.path)
+              if rel.startswith("/"):
+                  return False
+              try:
+                  f = (agents if not rel else root / rel).resolve()
+                  f.relative_to(root)
+              except (OSError, ValueError):
+                  return False
+              if not f.is_file():
+                  return False
+              if not p.fragment:
+                  return True
+              text = f.read_text(encoding="utf-8", errors="replace")
+              heads = {slug(m.group(1)) for line in text.splitlines() if (m := HEAD.match(line))}
+              return unquote(p.fragment).casefold() in heads
+
+          bad, ticked, inside = [], 0, False
+          for n, line in enumerate(agents.read_text(encoding="utf-8").splitlines(), 1):
+              if line.startswith("## "):
+                  inside = line[3:].strip() == "Production readiness"
+                  continue
+              if not inside:
+                  continue
+              m = TICK.match(line)
+              if not m:
+                  continue
+              ticked += 1
+              targets = LINK.findall(line)
+              if not targets:
+                  bad.append(f"AGENTS.md:{n}: ticked, no evidence link: {m.group(1)}")
+              elif not any(resolves(t) for t in targets):
+                  bad.append(f"AGENTS.md:{n}: evidence does not resolve: {m.group(1)}")
+          for b in bad:
+              print(f"::error file=AGENTS.md::{b}")
+          if bad:
+              print(f"{len(bad)} of {ticked} ticked readiness claims cite no resolvable evidence.")
+              print("Link the claim to a file in this repo, or untick it until there is one.")
+              print("A backtick is not a link: nothing can follow it.")
+              sys.exit(1)
+          print(f"readiness evidence: {ticked} ticked claim(s), all resolve")
+          CHECK
