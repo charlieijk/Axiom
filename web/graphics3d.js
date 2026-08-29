@@ -19,6 +19,7 @@ import {
   createTerrain,
   updateCamera,
 } from "./graphics3d-scene.js";
+import { createCharacterRenderer } from "./graphics3d-character.js";
 import {
   renderArchiveLab,
   renderEvolutionProgress,
@@ -40,6 +41,7 @@ const THREE_MODULE_URL = "/vendor/three.module.min.js";
 export const DEFAULT_SCENERY = {
   createSceneParts,
   createCreatureRenderer,
+  createCharacterRenderer,
   createTerrain,
   updateCamera,
 };
@@ -68,6 +70,7 @@ export function start(THREE, scenery = DEFAULT_SCENERY) {
   const {
     createSceneParts: buildSceneParts,
     createCreatureRenderer: buildCreatureRenderer,
+    createCharacterRenderer: buildCharacterRenderer,
     createTerrain: buildTerrain,
     updateCamera: framePosition,
   } = scenery;
@@ -91,6 +94,25 @@ export function start(THREE, scenery = DEFAULT_SCENERY) {
   const clock = new THREE.Clock();
   const renderParts = buildSceneParts(THREE, scene);
   const creature = buildCreatureRenderer(THREE, scene);
+  const character = buildCharacterRenderer(THREE, scene);
+
+  /** The rig currently on screen. */
+  function body() {
+    return state.characterBody ? character : creature;
+  }
+
+  /**
+   * Show one rig and hide the other. The physics is planar either way — the
+   * character declares the depth it invents, it does not gain an axis — so
+   * this changes what is drawn, never what is measured.
+   */
+  function applyBodyChoice() {
+    creature.setVisible?.(!state.characterBody);
+    character.setVisible?.(state.characterBody);
+  }
+
+  let shownCharacter = state.characterBody;
+  applyBodyChoice();
   const cameraScratch = {
     target: new THREE.Vector3(),
     offset: new THREE.Vector3(),
@@ -163,6 +185,7 @@ export function start(THREE, scenery = DEFAULT_SCENERY) {
       terrain = buildTerrain(THREE, state.replay.task);
       scene.add(terrain.mesh);
       creature.rebuild(state.replay.body);
+      character.rebuild(state.replay.body);
       updateMetrics();
     } catch (error) {
       if (requestId === state.replayRequestId) {
@@ -197,9 +220,14 @@ export function start(THREE, scenery = DEFAULT_SCENERY) {
 
     frameStep(deltaMs);
 
+    if (state.characterBody !== shownCharacter) {
+      shownCharacter = state.characterBody;
+      applyBodyChoice();
+    }
+
     if (state.replay) {
       const frame = state.replay.frames[state.frameIndex];
-      creature.update(frame, state.replay.body, deltaSeconds);
+      body().update(frame, state.replay.body, deltaSeconds);
       renderParts.update(frame, state.replay.task, now * 0.001);
       framePosition(camera, frame, state.replay.task, deltaSeconds, cameraScratch);
       updateMetrics();
@@ -335,6 +363,11 @@ export function bindActions(fetchReplay) {
     updateActionButtons();
   });
 
+  ui.bodyToggle.addEventListener("click", () => {
+    state.characterBody = !state.characterBody;
+    updateActionButtons();
+  });
+
   ui.reroll.addEventListener("click", () => {
     replayRequest.generations = Math.min(40, replayRequest.generations + 1);
     delete replayRequest.cell_x;
@@ -372,6 +405,7 @@ export function updateActionButtons() {
   setActionButton(ui.playToggle, state.playing ? "Pause" : "Play", state.playing ? "ph-pause" : "ph-play");
   setActionButton(ui.cameraMode, CAMERA_LABELS[state.cameraMode], "ph-video-camera");
   setActionButton(ui.fxToggle, state.effectsEnabled ? "Full FX" : "Lite FX", "ph-sparkle");
+  setActionButton(ui.bodyToggle, state.characterBody ? "Character" : "Box rig", "ph-person");
   const evolveLabel = replayRequest.mode === "evolved" ? "Evolve next generation" : "Generate replay";
   const evolveText = ui.reroll.querySelector("span");
   if (evolveText) {
@@ -379,6 +413,7 @@ export function updateActionButtons() {
   }
   ui.cameraMode.classList.toggle("is-active", state.cameraMode !== "follow");
   ui.fxToggle.classList.toggle("is-active", state.effectsEnabled);
+  ui.bodyToggle.classList.toggle("is-active", state.characterBody);
 }
 
 export function setActionButton(button, label, iconClass) {

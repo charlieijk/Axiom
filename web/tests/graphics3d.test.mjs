@@ -252,7 +252,7 @@ function fakeThree() {
 
 /** Scenery stand-ins that record the calls the render loop makes into them. */
 function fakeScenery() {
-  const record = { terrains: [], disposed: 0, sceneUpdates: [], creatureUpdates: [], rebuilds: [], cameraFrames: [] };
+  const record = { terrains: [], disposed: 0, sceneUpdates: [], creatureUpdates: [], rebuilds: [], cameraFrames: [], characterUpdates: [], characterRebuilds: [], visibility: [] };
   return {
     record,
     scenery: {
@@ -262,6 +262,12 @@ function fakeScenery() {
       createCreatureRenderer: () => ({
         update: (...args) => record.creatureUpdates.push(args),
         rebuild: (body) => record.rebuilds.push(body),
+        setVisible: (visible) => record.visibility.push(["creature", visible]),
+      }),
+      createCharacterRenderer: () => ({
+        update: (...args) => record.characterUpdates.push(args),
+        rebuild: (body) => record.characterRebuilds.push(body),
+        setVisible: (visible) => record.visibility.push(["character", visible]),
       }),
       createTerrain: (_three, task) => {
         const terrain = { mesh: { task }, task, dispose: () => (record.disposed += 1) };
@@ -285,6 +291,7 @@ function resetState() {
     orbitPitch: 0,
     dragging: false,
     cameraMode: "follow",
+    characterBody: false,
     cameraZoom: 1,
     effectsEnabled: true,
     hintFaded: false,
@@ -340,12 +347,49 @@ test("the three.js boot failure is reported on the page rather than swallowed", 
   assert.equal(consoleErrors.length, 2);
 });
 
+test("the body toggle swaps which rig is drawn, and only that", async () => {
+  // The wiring is only real if the choice reaches the render loop. Asserting
+  // the button's label would pass just as happily against a rig nothing draws.
+  const { renderLoop, world } = await boot();
+  const frameMs = state.replay.dt * 1000;
+  const step = () => {
+    state.lastTime = 0;
+    state.accumulator = 0;
+    renderLoop(frameMs);
+  };
+
+  assert.deepEqual(
+    world.record.visibility,
+    [["creature", true], ["character", false]],
+    "the box rig is the default, and the character starts hidden",
+  );
+  assert.deepEqual(world.record.characterRebuilds.at(-1), state.replay.body,
+    "both rigs are built from the replay, so a later toggle has a body to show");
+
+  step();
+  const boxFrames = world.record.creatureUpdates.length;
+  assert.equal(boxFrames > 0, true, "the box rig must be driven while it is shown");
+  assert.equal(world.record.characterUpdates.length, 0, "the hidden rig costs nothing per frame");
+
+  state.characterBody = true;
+  step();
+  assert.equal(world.record.characterUpdates.length > 0, true, "the character must be driven once chosen");
+  assert.equal(world.record.creatureUpdates.length, boxFrames, "the box rig must stop being driven");
+  assert.deepEqual(
+    world.record.visibility.slice(-2),
+    [["creature", false], ["character", true]],
+    "the swap must reach the scene, not just the state",
+  );
+});
+
 test("DEFAULT_SCENERY wires the real scene builders", async () => {
   // The injection point must default to the shipped builders; a stray stub left
   // in the default would ship a page that renders nothing.
   const scene = await import("../graphics3d-scene.js");
+  const character = await import("../graphics3d-character.js");
   assert.equal(DEFAULT_SCENERY.createSceneParts, scene.createSceneParts);
   assert.equal(DEFAULT_SCENERY.createCreatureRenderer, scene.createCreatureRenderer);
+  assert.equal(DEFAULT_SCENERY.createCharacterRenderer, character.createCharacterRenderer);
   assert.equal(DEFAULT_SCENERY.createTerrain, scene.createTerrain);
   assert.equal(DEFAULT_SCENERY.updateCamera, scene.updateCamera);
 });
