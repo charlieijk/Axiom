@@ -25,6 +25,7 @@ const GRAPHICS_CSS: &str = include_str!("../web/graphics3d.css");
 const GRAPHICS_JS: &str = include_str!("../web/graphics3d.js");
 const GRAPHICS_STATE_JS: &str = include_str!("../web/graphics3d-state.js");
 const GRAPHICS_SCENE_JS: &str = include_str!("../web/graphics3d-scene.js");
+const GRAPHICS_CHARACTER_JS: &str = include_str!("../web/graphics3d-character.js");
 const GRAPHICS_JOURNAL_JS: &str = include_str!("../web/graphics3d-journal.js");
 const THREE_JS: &str = include_str!("../web/vendor/three.module.min.js");
 // Vendored so /3d loads no third-party host. Both carry their font binaries as
@@ -211,9 +212,11 @@ pub fn gui_smoke_check() -> io::Result<()> {
     }
     let graphics_state_js = response_body("/graphics3d-state.js");
     let graphics_scene_js = response_body("/graphics3d-scene.js");
+    let graphics_character_js = response_body("/graphics3d-character.js");
     let graphics_journal_js = response_body("/graphics3d-journal.js");
     if !graphics_state_js.contains("replayRequest")
         || !graphics_scene_js.contains("createCreatureRenderer")
+        || !graphics_character_js.contains("createCharacterRenderer")
         || !graphics_journal_js.contains("renderFieldJournal")
     {
         return Err(io::Error::other(
@@ -291,6 +294,7 @@ fn handle_connection(mut stream: TcpStream, replay_limiter: &ReplayLimiter) -> i
         "/graphics3d.js"
         | "/graphics3d-state.js"
         | "/graphics3d-scene.js"
+        | "/graphics3d-character.js"
         | "/graphics3d-journal.js" => (
             "200 OK",
             "application/javascript; charset=utf-8",
@@ -363,6 +367,7 @@ fn response_body(path: &str) -> String {
         "/graphics3d.js" => GRAPHICS_JS.to_string(),
         "/graphics3d-state.js" => GRAPHICS_STATE_JS.to_string(),
         "/graphics3d-scene.js" => GRAPHICS_SCENE_JS.to_string(),
+        "/graphics3d-character.js" => GRAPHICS_CHARACTER_JS.to_string(),
         "/graphics3d-journal.js" => GRAPHICS_JOURNAL_JS.to_string(),
         "/vendor/three.module.min.js" => THREE_JS.to_string(),
         "/vendor/phosphor-icons.css" => PHOSPHOR_CSS.to_string(),
