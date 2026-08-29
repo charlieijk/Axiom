@@ -495,7 +495,13 @@ export function createCreatureRenderer(THREE, scene) {
     ghostGroup.rotation.copy(group.rotation);
   }
 
-  return { rebuild, update };
+  /** Show or hide every group this renderer owns — the ghosts included. */
+  function setVisible(visible) {
+    group.visible = visible;
+    ghostGroup.visible = visible;
+  }
+
+  return { rebuild, update, setVisible };
 }
 
 export function updateCamera(camera, frame, task, deltaSeconds, scratch) {

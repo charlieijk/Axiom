@@ -309,5 +309,10 @@ export function createCharacterRenderer(THREE, scene) {
     eyeGeometry.dispose?.();
   }
 
-  return { rebuild, update, dispose, describeFidelity };
+  /** Mirrors the creature renderer's control, so the page can swap either in. */
+  function setVisible(visible) {
+    group.visible = visible;
+  }
+
+  return { rebuild, update, dispose, describeFidelity, setVisible };
 }

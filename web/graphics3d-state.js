@@ -9,6 +9,7 @@ export const ui = {
   reroll: document.getElementById("reroll"),
   cameraMode: document.getElementById("camera-mode"),
   fxToggle: document.getElementById("fx-toggle"),
+  bodyToggle: document.getElementById("body-toggle"),
   runLabel: document.getElementById("run-label"),
   fieldNote: document.getElementById("field-note"),
   controllerNote: document.getElementById("controller-note"),
@@ -67,6 +68,9 @@ export const state = {
   dragStart: { x: 0, y: 0 },
   dragOrbit: { yaw: 0, pitch: 0 },
   cameraMode: "follow",
+  // The box rig is the default because it is the honest one: the physics is
+  // planar, and boxes at z = 0 claim nothing more. The character is opt-in.
+  characterBody: false,
   cameraZoom: 1,
   effectsEnabled: true,
   hintFaded: false,
