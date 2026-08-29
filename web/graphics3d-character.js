@@ -131,7 +131,10 @@ export function createCharacterRenderer(THREE, scene) {
   scene.add(group);
 
   const torsoGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const limbGeometry = new THREE.CapsuleGeometry
+  // Feature-detect the constructor, not its result: `new THREE.CapsuleGeometry`
+  // builds one and then tests the object, which is always truthy — so the
+  // fallback could never run, and an older three.js would throw here instead.
+  const limbGeometry = THREE.CapsuleGeometry
     ? new THREE.CapsuleGeometry(0.5, 1, 4, 10)
     : new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
   const headGeometry = new THREE.SphereGeometry(0.5, 20, 14);
