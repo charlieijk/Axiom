@@ -295,14 +295,18 @@ jobs:
         with:
           persist-credentials: false
 
-      # The evidence rule from steward (charlieijk/fleet-steward), inlined.
-      # steward is a private repository, so a step that installed it would
-      # trade a short check for a token every repo would then need. steward
-      # remains the full linter — canonical wording, ordering, section order —
-      # and the fleet sweep still runs it. This gate enforces the one rule that
-      # keeps regressing: a claim whose evidence is named in prose backticks,
-      # which nothing can follow, so it reads as substantiated while nothing
-      # checks it.
+      # steward's evidence rule, inlined. steward is a private repository, so a
+      # step that installed it would trade a short check for a read token every
+      # repository would then need.
+      #
+      # It enforces one rule, the one that keeps regressing: a ticked readiness
+      # claim whose evidence is named in prose backticks, which nothing can
+      # follow — so the claim reads as substantiated while nothing checks it.
+      # steward remains the full linter (canonical wording, ordering, section
+      # order) and the fleet sweep still runs it.
+      #
+      # This is a copy. `steward gate --check <repo>` says whether it is still
+      # the rule it came from; do not edit it here without upstreaming.
       - name: Every ticked readiness claim links to evidence that resolves
         shell: bash
         run: |
@@ -360,6 +364,7 @@ jobs:
               print(f"{len(bad)} of {ticked} ticked readiness claims cite no resolvable evidence.")
               print("Link the claim to a file in this repo, or untick it until there is one.")
               print("A backtick is not a link: nothing can follow it.")
+              print("A directory is not a file: link a file inside it, not the directory.")
               sys.exit(1)
           print(f"readiness evidence: {ticked} ticked claim(s), all resolve")
           CHECK
