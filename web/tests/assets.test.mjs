@@ -21,9 +21,60 @@ const sheets = {
 const phosphorCss = await read("vendor/phosphor-icons.css");
 const fontsCss = await read("vendor/fonts.css");
 
+// Every stylesheet and script src/web.rs serves. A page reaches the network
+// through these as much as through its own markup: an `@import` in a stylesheet
+// or a module specifier in a script is a fetch the browser makes on its behalf.
+const scripts = {
+  "app.js": await read("app.js"),
+  "graphics3d.js": await read("graphics3d.js"),
+  "graphics3d-state.js": await read("graphics3d-state.js"),
+  "graphics3d-scene.js": await read("graphics3d-scene.js"),
+  "graphics3d-character.js": await read("graphics3d-character.js"),
+  "graphics3d-journal.js": await read("graphics3d-journal.js"),
+  "vendor/three.module.min.js": await read("vendor/three.module.min.js"),
+};
+const servedSheets = { ...sheets, "vendor/phosphor-icons.css": phosphorCss, "vendor/fonts.css": fontsCss };
+
 /** Every src/href the page asks the browser to fetch. */
 function references(html) {
   return [...html.matchAll(/\b(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
+}
+
+/**
+ * An absolute or protocol-relative URL: a host Axiom does not control.
+ *
+ * Anchored, so a `data:` URI whose base64 payload happens to contain `//` is
+ * not mistaken for one -- which matters, because every vendored font is a
+ * `data:` URI.
+ */
+const isExternal = (url) => /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(url.trim());
+
+/** Every external URL a stylesheet makes the browser fetch. */
+function stylesheetFetches(css) {
+  const urls = [...css.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"]*))\s*\)/g)].map(
+    (match) => match[1] ?? match[2] ?? match[3],
+  );
+  const imports = [...css.matchAll(/@import\s+(?:url\(\s*)?["']([^"']+)["']/g)].map((m) => m[1]);
+  return [...new Set([...urls, ...imports])].filter(isExternal);
+}
+
+/**
+ * Every external URL a script makes the browser fetch: module specifiers,
+ * static and dynamic, and literal `fetch` targets.
+ *
+ * Comments are deliberately not stripped. Stripping `//` line comments would
+ * cut a real `fetch("https://…")` in half at its own scheme separator and let
+ * it through, and a guard that fails open is worse than one that occasionally
+ * objects to a URL someone wrote in prose.
+ */
+function scriptFetches(js) {
+  const specifiers = [
+    ...js.matchAll(/\bfrom\s*["']([^"']+)["']/g),
+    ...js.matchAll(/\bimport\s*\(\s*["']([^"']+)["']/g),
+    ...js.matchAll(/\bimport\s+["']([^"']+)["']/g),
+    ...js.matchAll(/\bfetch\s*\(\s*["']([^"']+)["']/g),
+  ].map((match) => match[1]);
+  return [...new Set(specifiers)].filter(isExternal);
 }
 
 test("no page fetches anything from a host Axiom does not control", () => {
@@ -37,6 +88,83 @@ test("no page fetches anything from a host Axiom does not control", () => {
     );
     assert.doesNotMatch(html, /rel="(pre(connect|load|fetch)|dns-prefetch)"[^>]*https?:/, name);
   }
+});
+
+test("no served stylesheet or script reaches for an external host either", () => {
+  // The markup check above only sees `src`/`href`. The whole point of vendoring
+  // the fonts and icons was to delete two `cdn.jsdelivr.net` stylesheets and an
+  // `unpkg.com` script -- and a single `@import url("https://cdn.jsdelivr.net/…")`
+  // put back at the top of graphics3d.css restores that dependency while the
+  // markup stays clean. src/web.rs serves these files verbatim, so they are part
+  // of the same supply-chain surface as the pages that load them.
+  for (const [name, css] of Object.entries(servedSheets)) {
+    assert.deepEqual(
+      stylesheetFetches(css),
+      [],
+      `${name} pulls from a third-party host; vendor the asset instead`,
+    );
+  }
+  for (const [name, js] of Object.entries(scripts)) {
+    assert.deepEqual(
+      scriptFetches(js),
+      [],
+      `${name} pulls from a third-party host; vendor the module instead`,
+    );
+  }
+});
+
+test("the external-host check reads local and inlined assets as local", () => {
+  // Negative control. This guard is only worth having if it stays quiet about
+  // everything the pages legitimately do, so the shapes actually shipped --
+  // `data:` fonts, absolute and relative local paths, same-origin API calls --
+  // are asserted not to trip it.
+  assert.deepEqual(
+    stylesheetFetches(`
+      @font-face { src: url("data:font/woff2;base64,d09GRgABAAAA//8AAA=="); }
+      @import "./palette.css";
+      .a { background: url(/vendor/grid.png); }
+      .b { background: url('../design/hero.png'); }
+      .c { background: url(sprite.svg); }
+    `),
+    [],
+  );
+  assert.deepEqual(
+    scriptFetches(`
+      import * as THREE from "/vendor/three.module.min.js";
+      import { createScene } from "./graphics3d-scene.js";
+      const lazy = await import("./graphics3d-journal.js");
+      const response = await fetch("/api/replay?mode=evolved");
+    `),
+    [],
+  );
+
+  // And the positive control: each construct the negative control exercises is
+  // caught once it points off-host, so the emptiness above is a verdict rather
+  // than a regex that matches nothing.
+  assert.deepEqual(
+    stylesheetFetches(`
+      @import url("https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5.1.1/index.css");
+      @font-face { src: url(https://fonts.gstatic.com/s/manrope/v1.woff2); }
+      .a { background: url("//assets.example.test/grid.png"); }
+    `).sort(),
+    [
+      "//assets.example.test/grid.png",
+      "https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5.1.1/index.css",
+      "https://fonts.gstatic.com/s/manrope/v1.woff2",
+    ],
+  );
+  assert.deepEqual(
+    scriptFetches(`
+      import * as THREE from "https://unpkg.com/three@0.165.0/build/three.module.js";
+      const lazy = await import("//cdn.example.test/journal.js");
+      const response = await fetch("http://telemetry.example.test/collect");
+    `).sort(),
+    [
+      "//cdn.example.test/journal.js",
+      "http://telemetry.example.test/collect",
+      "https://unpkg.com/three@0.165.0/build/three.module.js",
+    ],
+  );
 });
 
 test("local asset references carry no hand-maintained cache-busting token", () => {
