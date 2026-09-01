@@ -72,6 +72,7 @@ Rust binary; the table below stays the canonical, CI-verified form.
 - The Rust simulation and evaluation code is authoritative. Browser surfaces may project or approximate replay data but must not silently redefine fitness, evolution, archive, or checkpoint semantics.
 - A fixed seed must produce identical results within one binary. Cross-architecture rigid-body goldens assert behavioral bands rather than bit-identical trajectories.
 - Checkpoints contain versioned experiment state and are written by atomic replacement. Unknown versions and malformed checkpoint data must fail explicitly.
+- Serialized MAP-Elites grids are accepted only when both dimensions are non-zero and their product exactly matches the cell vector; checkpoint and Field Lab loaders share this boundary.
 - The Rust GUI is an unauthenticated, single-user local tool. Keep its default loopback binding unless an authenticated TLS boundary is deliberately supplied.
 - `axiom-field` parameters and software-only holdout results are uncalibrated. Do not present them as hardware validation or measured sim-to-real transfer.
 

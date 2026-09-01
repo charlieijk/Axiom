@@ -116,7 +116,7 @@ field, pass `--pack rough-inspection`. `--report-json` and `--report-md` write
 human- and machine-readable summaries without replacing the complete,
 versioned checkpoint.
 
-Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error.
+Checkpoint writes use a temporary sibling file and atomic replacement, so an interrupted save does not leave a partially written destination. Unknown checkpoint versions and malformed files fail with an explicit load error. Archive dimensions must be non-zero and match the serialized cell count exactly, so a truncated or internally inconsistent repertoire is refused before inspection, replay, or handoff.
 
 Move from an experiment to downstream creature design with a deterministic shortlist:
 
