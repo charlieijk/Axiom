@@ -30,6 +30,8 @@ Simulation (forwards to the Rust binary; -r builds release first):
   animate [CONTROLLER] [...]  Terminal replay (--task, --frames, --fps, --checkpoint PATH)
   evolve [...]                Run evolution (--generations, --population, --steps, --seed, --save PATH)
   inspect PATH                Summarize a saved checkpoint
+  handoff CHECKPOINT --output PATH
+                              Export champion, stable, explorer, and lean candidates
   gui [--port N] [--check]    Serve the replay browser on 127.0.0.1:8787
 
 Development:
@@ -99,7 +101,7 @@ case "$COMMAND" in
   play)
     exec cargo run --release --locked -p axiom-field -- lab "$@"
     ;;
-  demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
+  demo|evaluate|evolve|animate|replay|inspect|checkpoint|handoff|shortlist|gui|serve)
     run_sim "$@"
     ;;
 

@@ -1,7 +1,7 @@
 use crate::fitness::{Evaluation, Metrics};
 use crate::genome::Genome;
 use crate::rng::Rng;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 
 /// A labelled, bounded descriptor axis.
 ///
@@ -105,11 +105,54 @@ impl Axis {
 /// The grid knows nothing about genomes, metrics, or simulation: it stores
 /// whatever payload the caller supplies and ranks it with a caller-supplied
 /// score. [`Archive`] is the Axiom-specific instance of it.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Grid<T> {
     pub width: usize,
     pub height: usize,
     cells: Vec<Option<T>>,
+}
+
+#[derive(Deserialize)]
+struct SerializedGrid<T> {
+    width: usize,
+    height: usize,
+    cells: Vec<Option<T>>,
+}
+
+impl<'de, T> Deserialize<'de> for Grid<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let serialized = SerializedGrid::<T>::deserialize(deserializer)?;
+        if serialized.width == 0 || serialized.height == 0 {
+            return Err(D::Error::custom(
+                "archive grid dimensions must both be greater than zero",
+            ));
+        }
+        let expected_cells = serialized
+            .width
+            .checked_mul(serialized.height)
+            .ok_or_else(|| D::Error::custom("archive grid dimensions overflow"))?;
+        if serialized.cells.len() != expected_cells {
+            return Err(D::Error::custom(format!(
+                "archive grid has {} cells but dimensions {}x{} require {expected_cells}; \
+                 serialized shape does not match",
+                serialized.cells.len(),
+                serialized.width,
+                serialized.height,
+            )));
+        }
+
+        Ok(Self {
+            width: serialized.width,
+            height: serialized.height,
+            cells: serialized.cells,
+        })
+    }
 }
 
 impl<T> Grid<T> {
@@ -414,6 +457,25 @@ mod tests {
 
         let decoded: Archive = serde_json::from_value(value).expect("archive should round-trip");
         assert_eq!(decoded, archive);
+    }
+
+    #[test]
+    fn grid_deserialization_rejects_impossible_storage_shapes() {
+        let zero_dimension = serde_json::from_value::<Grid<u8>>(serde_json::json!({
+            "width": 0,
+            "height": 1,
+            "cells": [],
+        }))
+        .expect_err("a serialized grid cannot have a zero dimension");
+        assert!(zero_dimension.to_string().contains("greater than zero"));
+
+        let overflow = serde_json::from_value::<Grid<u8>>(serde_json::json!({
+            "width": usize::MAX,
+            "height": 2,
+            "cells": [],
+        }))
+        .expect_err("serialized grid dimensions cannot overflow");
+        assert!(overflow.to_string().contains("dimensions overflow"));
     }
 
     #[test]

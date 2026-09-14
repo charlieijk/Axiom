@@ -116,7 +116,7 @@ Solid arrows are runtime control or data flow. The single dashed arrow is a code
 
 ### Determinism and evidence
 
-- Root evolution is tested for identical results from a fixed seed, and complete versioned checkpoints preserve the configuration, report, archive, history, and lineage needed to inspect a run.
+- Root evolution is tested for identical results from a fixed seed, and complete versioned checkpoints preserve the configuration, report, archive, history, and lineage needed to inspect a run. The shared MAP-Elites deserializer rejects zero, overflowing, or cell-count-mismatched grid dimensions before either root checkpoints or Field Lab reports can expose inconsistent archive evidence.
 - Field Lab asserts bit-identical trajectories for identical inputs within one binary. Across x86_64 and aarch64, its committed goldens assert behavioral bands because rigid-body contact amplifies floating-point differences.
 - Field Lab's bundled robot parameters are uncalibrated. Perturbed-world holdouts and committed artifacts are reproducible software evidence, not measured sim-to-real transfer or hardware validation.
 

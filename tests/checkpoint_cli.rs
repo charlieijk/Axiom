@@ -2,8 +2,11 @@ use std::{
     fs,
     path::PathBuf,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static TEMPORARY_PATH_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[test]
 fn cli_saves_inspects_and_replays_a_checkpoint() {
@@ -122,6 +125,61 @@ fn cli_saves_inspects_and_replays_a_checkpoint() {
 }
 
 #[test]
+fn cli_rejects_a_checkpoint_with_an_inconsistent_archive_shape() {
+    let checkpoint_path = temporary_checkpoint_path();
+    let binary = env!("CARGO_BIN_EXE_axiom");
+    let evolve = Command::new(binary)
+        .args([
+            "evolve",
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--steps",
+            "12",
+            "--seed",
+            "73",
+            "--save",
+        ])
+        .arg(&checkpoint_path)
+        .output()
+        .expect("evolve command should start");
+    assert!(
+        evolve.status.success(),
+        "evolve failed: {}",
+        String::from_utf8_lossy(&evolve.stderr)
+    );
+
+    let mut checkpoint: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&checkpoint_path).expect("checkpoint JSON should exist"),
+    )
+    .expect("checkpoint should begin as valid JSON");
+    let width = checkpoint["report"]["archive"]["width"]
+        .as_u64()
+        .expect("archive width should be an integer");
+    checkpoint["report"]["archive"]["width"] = serde_json::Value::from(width + 1);
+    fs::write(
+        &checkpoint_path,
+        serde_json::to_vec_pretty(&checkpoint).expect("corrupt checkpoint should serialize"),
+    )
+    .expect("corrupt checkpoint should be written");
+
+    let inspection = Command::new(binary)
+        .arg("inspect")
+        .arg(&checkpoint_path)
+        .output()
+        .expect("inspect command should start");
+    let stderr = String::from_utf8_lossy(&inspection.stderr).into_owned();
+    fs::remove_file(checkpoint_path).expect("test checkpoint should be removable");
+
+    assert!(!inspection.status.success());
+    assert!(
+        stderr.contains("archive grid") && stderr.contains("does not match"),
+        "unexpected checkpoint error: {stderr}"
+    );
+}
+
+#[test]
 fn cli_exports_rough_inspection_reports() {
     let json_path = temporary_checkpoint_path().with_extension("report.json");
     let markdown_path = temporary_checkpoint_path().with_extension("report.md");
@@ -174,5 +232,9 @@ fn temporary_checkpoint_path() -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("system time should follow epoch")
         .as_nanos();
-    std::env::temp_dir().join(format!("axiom-cli-{unique}.json"))
+    let counter = TEMPORARY_PATH_COUNTER.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!(
+        "axiom-cli-{}-{unique}-{counter}.json",
+        std::process::id()
+    ))
 }
