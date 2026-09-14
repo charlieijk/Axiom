@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint",
-    "test": "node --test web/tests/*.test.mjs"
+    "test": "node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

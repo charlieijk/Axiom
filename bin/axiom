@@ -22,12 +22,16 @@ Axiom CLI
 
 usage: axiom [-r] <command> [args]
 
+  play                        Open the interactive 3D Axiom workshop on port 8790
+
 Simulation (forwards to the Rust binary; -r builds release first):
   demo                        Compare the three controllers on rough terrain
   evaluate [CONTROLLER]       Score one controller (feedforward|recurrent|cpg)
   animate [CONTROLLER] [...]  Terminal replay (--task, --frames, --fps, --checkpoint PATH)
   evolve [...]                Run evolution (--generations, --population, --steps, --seed, --save PATH)
   inspect PATH                Summarize a saved checkpoint
+  handoff CHECKPOINT --output PATH
+                              Export champion, stable, explorer, and lean candidates
   gui [--port N] [--check]    Serve the replay browser on 127.0.0.1:8787
 
 Development:
@@ -67,7 +71,7 @@ run_sim() {
 }
 
 test_rust()  { cargo test --workspace --locked "$@"; }
-test_web()   { node --test web/tests/*.test.mjs; }
+test_web()   { node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs; }
 test_site()  { npm --prefix site test; }
 test_flask() { python -m unittest discover -s tests_python -p 'test_*.py' -v; }
 
@@ -94,7 +98,10 @@ bench_arm64() {
 }
 
 case "$COMMAND" in
-  demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
+  play)
+    exec cargo run --release --locked -p axiom-field -- lab "$@"
+    ;;
+  demo|evaluate|evolve|animate|replay|inspect|checkpoint|handoff|shortlist|gui|serve)
     run_sim "$@"
     ;;
 

@@ -138,6 +138,16 @@ impl SearchReport {
 
 /// Runs MAP-Elites and returns the archive plus its history.
 pub fn run_search(config: &SearchConfig, robot: &RobotConfig) -> SearchReport {
+    run_search_observed(config, robot, |_| true)
+}
+
+/// The same seeded search with cooperative cancellation and progress at candidate
+/// boundaries. Returning false stops before the next physics evaluation.
+pub fn run_search_observed(
+    config: &SearchConfig,
+    robot: &RobotConfig,
+    mut proceed: impl FnMut(usize) -> bool,
+) -> SearchReport {
     let mut rng = Rng::new(config.seed);
     let ensemble = config.training_ensemble();
     let mut archive: Grid<FieldElite> = Grid::new(config.archive_width, config.archive_height);
@@ -146,10 +156,13 @@ pub fn run_search(config: &SearchConfig, robot: &RobotConfig) -> SearchReport {
 
     let seed_genome = CpgGenome::from_gait(&sine_gait());
 
-    for generation in 0..config.generations {
+    'search: for generation in 0..config.generations {
         let mut fell_somewhere = 0;
 
         for index in 0..config.batch {
+            if !proceed(evaluated) {
+                break 'search;
+            }
             let candidate = match archive.sample(&mut rng) {
                 // Once the archive has occupants, vary them.
                 Some(elite) => elite.genome.mutate(&mut rng, config.mutation_scale),
@@ -210,7 +223,7 @@ pub fn run_search(config: &SearchConfig, robot: &RobotConfig) -> SearchReport {
         robot: robot.meta.name.clone(),
         calibrated: robot.meta.calibrated,
         seed: config.seed,
-        generations: config.generations,
+        generations: history.len(),
         evaluated,
         ticks: config.ticks,
         worlds: config.worlds,

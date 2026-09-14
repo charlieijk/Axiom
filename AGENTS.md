@@ -1,10 +1,17 @@
 # Axiom
 
-> A Rust embodied-evolution sandbox with inspectable quality-diversity search and deterministic replay.
+> A 3D robotics game for building robots, evolving their movement controllers, and replaying physical trials.
+
+## Active primary project
+
+Charlie explicitly reopened Axiom on 2026-09-13 as an active primary project.
+Feature development toward a playable 3D robotics simulator is authorized; this
+supersedes older workspace notes that froze Axiom for licensing eligibility.
+Keep the existing licence and repository visibility unchanged.
 
 ## What this is
 
-Axiom evolves body plans and neural controllers across terrain tasks, preserving diverse elites in a MAP-Elites archive rather than selecting only one winner. The root crate owns the deterministic simulation, evaluation, evolution, checkpoints, CLI, and replay server. `crates/axiom-field/` adds a rigid-body quadruped lab for robust-gait experiments, while `web/` and `site/` provide distinct browser surfaces over the project.
+Axiom's primary experience is the interactive 3D game in `crates/axiom-field/`: users customize a quadruped and evolve its eight-joint movement controller. Automatic body evolution is not part of this 3D mode. The original planar research engine evolves body plans and neural controllers across terrain tasks, preserving diverse elites in a MAP-Elites archive rather than selecting only one winner. The root crate owns the deterministic simulation, evaluation, evolution, checkpoints, CLI, and replay server. `crates/axiom-field/` adds a rigid-body quadruped lab for robust-gait experiments, while `web/` and `site/` provide distinct browser surfaces over the project.
 The versioned candidate-handoff command selects champion, stable, explorer, and lean archive
 members with their complete genomes for downstream creature-design workflows.
 
@@ -20,10 +27,11 @@ members with their complete genomes for downstream creature-design workflows.
 ## Quick start
 
 ```sh
-cargo run --locked -- gui
+bin/axiom play
 ```
 
-Open the loopback URL printed by the command. The default is `http://127.0.0.1:8787`.
+Open `http://127.0.0.1:8790` for the interactive 3D workshop. The original planar
+research GUI remains available via `cargo run --locked -- gui` on port 8787.
 
 ## Commands
 
@@ -34,12 +42,13 @@ Rust binary; the table below stays the canonical, CI-verified form.
 | Task | Command |
 | --- | --- |
 | Install site dependencies | `npm --prefix site ci` |
+| Run the 3D robotics test range | `cargo run --locked -p axiom-field -- lab` |
 | Run the Rust GUI | `cargo run --locked -- gui` |
 | Export a creature shortlist | `cargo run --locked -- handoff checkpoints/run.json --output exports/shortlist.json` |
 | Run the public site | `npm --prefix site run dev` |
 | Test the Rust workspace | `cargo test --workspace --locked` |
 | Measure Rust coverage | `cargo llvm-cov --workspace --fail-under-lines 80` |
-| Test embedded browser logic | `node --test web/tests/*.test.mjs` |
+| Test embedded browser logic | `node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs` |
 | Test the public site | `npm --prefix site test` |
 | Test the Flask adapter | `python -m unittest discover -s tests_python -p 'test_*.py' -v` |
 | Check Rust formatting | `cargo fmt --all -- --check` |
@@ -72,6 +81,7 @@ Rust binary; the table below stays the canonical, CI-verified form.
 - The Rust simulation and evaluation code is authoritative. Browser surfaces may project or approximate replay data but must not silently redefine fitness, evolution, archive, or checkpoint semantics.
 - A fixed seed must produce identical results within one binary. Cross-architecture rigid-body goldens assert behavioral bands rather than bit-identical trajectories.
 - Checkpoints contain versioned experiment state and are written by atomic replacement. Unknown versions and malformed checkpoint data must fail explicitly.
+- Serialized MAP-Elites grids are accepted only when both dimensions are non-zero and their product exactly matches the cell vector; checkpoint and Field Lab loaders share this boundary.
 - The Rust GUI is an unauthenticated, single-user local tool. Keep its default loopback binding unless an authenticated TLS boundary is deliberately supplied.
 - `axiom-field` parameters and software-only holdout results are uncalibrated. Do not present them as hardware validation or measured sim-to-real transfer.
 
@@ -113,7 +123,7 @@ catch padding.
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings`
 - [ ] `cargo llvm-cov --workspace --fail-under-lines 80`
 - [ ] `for file in web/*.js; do node --input-type=module --check < "$file"; done`
-- [ ] `node --test web/tests/*.test.mjs`
+- [ ] `node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs`
 - [ ] `cargo run --locked -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18`
 - [ ] `cargo run --locked -- gui --check`
 - [ ] `cargo package --locked`

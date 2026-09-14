@@ -14,11 +14,13 @@ pub mod config;
 pub mod controller;
 pub mod evaluate;
 pub mod gait;
+pub mod lab;
 pub mod perturb;
 pub mod search;
 pub mod servo;
 pub mod sim;
 pub mod trajectory;
+pub mod workshop;
 
 pub use config::RobotConfig;
 pub use controller::CpgGenome;
