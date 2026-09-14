@@ -69,7 +69,7 @@ export default [
   },
   {
     // The 3D field journal's ES modules.
-    files: ["web/graphics3d*.js"],
+    files: ["web/graphics3d*.js", "crates/axiom-field/web/*.js"],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "module",
@@ -79,7 +79,7 @@ export default [
   },
   {
     // The node:test suites and their DOM stubs.
-    files: ["web/tests/**/*.mjs"],
+    files: ["web/tests/**/*.mjs", "crates/axiom-field/web/tests/*.mjs"],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "module",

@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "checking web/app.js (classic script)"
           node --input-type=commonjs --check < web/app.js
-          for file in web/graphics3d*.js web/vendor/*.js; do
+          for file in web/graphics3d*.js web/vendor/*.js crates/axiom-field/web/*.js; do
             echo "checking ${file} (module)"
             node --input-type=module --check < "${file}"
           done
@@ -80,7 +80,7 @@ jobs:
       - name: Browser logic tests
         # Exercises web/app.js and the 3D journal modules under node:test. The
         # bare directory form is not a valid target, so the files are globbed.
-        run: node --test web/tests/*.test.mjs
+        run: node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs
 
       - name: Animation smoke test
         run: cargo run -- animate cpg --frames 3 --fps 0 --no-clear --width 60 --height 18

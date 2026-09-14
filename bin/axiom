@@ -22,6 +22,8 @@ Axiom CLI
 
 usage: axiom [-r] <command> [args]
 
+  play                        Open the interactive 3D Axiom workshop on port 8790
+
 Simulation (forwards to the Rust binary; -r builds release first):
   demo                        Compare the three controllers on rough terrain
   evaluate [CONTROLLER]       Score one controller (feedforward|recurrent|cpg)
@@ -67,7 +69,7 @@ run_sim() {
 }
 
 test_rust()  { cargo test --workspace --locked "$@"; }
-test_web()   { node --test web/tests/*.test.mjs; }
+test_web()   { node --test web/tests/*.test.mjs crates/axiom-field/web/tests/*.test.mjs; }
 test_site()  { npm --prefix site test; }
 test_flask() { python -m unittest discover -s tests_python -p 'test_*.py' -v; }
 
@@ -94,6 +96,9 @@ bench_arm64() {
 }
 
 case "$COMMAND" in
+  play)
+    exec cargo run --release --locked -p axiom-field -- lab "$@"
+    ;;
   demo|evaluate|evolve|animate|replay|inspect|checkpoint|gui|serve)
     run_sim "$@"
     ;;

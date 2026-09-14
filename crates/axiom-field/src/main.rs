@@ -20,6 +20,13 @@ fn main() -> ExitCode {
     let rest = arguments.get(1..).unwrap_or_default();
 
     match command {
+        Some("lab") => match axiom_field::lab::serve() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("field lab: {error}");
+                ExitCode::FAILURE
+            }
+        },
         Some("stand") => stand(rest),
         Some("gait") => gait(rest),
         Some("record") => record(rest),
@@ -44,6 +51,8 @@ fn print_help() {
         "axiom-field — rigid-body field lab for a fixed hobby-servo quadruped
 
 USAGE:
+  lab     Open the local playable 3D rigid-body test range on port 8790.
+
   stand   [--config <robot.toml>] [--ticks <n>]
           Settle the robot from its spawn drop and report the resting pose.
 

@@ -1,10 +1,101 @@
 # Axiom
 
-> A Rust quality-diversity sandbox for evolving bodies and neural controllers.
+> A 3D game where you build and evolve your own robots.
 
-Axiom is a Rust embodied-evolution sandbox. It evolves simple body plans and neural controllers across terrain tasks, then keeps diverse elites in a MAP-Elites archive instead of collapsing everything to one winner.
+Design a quadruped, evolve how it moves, and put it through physical trials.
+Axiom combines an interactive 3D game with a robotics workshop: build, evolve,
+test, inspect, and try again. Rust and Rapier simulate the robot's body, joints,
+servos and ground contacts; the browser shows the actual simulated motion.
 
-Start with the reviewer-ready walkthrough in [DEMO.md](DEMO.md).
+In the current 3D game, **you customize the robot's body and evolution optimizes
+its movement controller**. Body dimensions do not evolve automatically in this
+mode. The earlier planar body-and-neural-controller experiments remain available
+as separate research tools.
+
+## Play
+
+From this checkout, with Rust 1.89 or newer installed:
+
+```sh
+bin/axiom play
+```
+
+Open **http://127.0.0.1:8790** in a browser with WebGL support. The first launch
+builds the game. The equivalent command is:
+
+```sh
+cargo run --release --locked -p axiom-field -- lab
+```
+
+Start with the reference trot or choose **Evolve → Load bundled archive** to
+explore 43 controllers from the earlier 576-candidate search. The bundled archive
+restores its original robot and loads its highest-scoring training controller;
+new trials measure how that controller performs in the selected course.
+
+**Controls:** drag to orbit, scroll to zoom, **Space** to start/pause, and **R**
+to reset. Keyboard shortcuts leave focused form controls alone.
+
+## Build, evolve, and test
+
+- **Trial:** walk one metre upright on flat ground or three physical 6 mm rails.
+  Tune the manual trot, pause, reset, and inspect foot contacts with the orbit camera.
+- **Build:** adjust chassis size/mass, leg lengths and friction. Applying a design
+  rebuilds the real collision geometry and clears scores from the previous design.
+- **Evolve:** load the bundled 43-controller repertoire from the earlier
+  576-candidate search with its nominal robot, or run seeded MAP-Elites across three perturbed flat-ground worlds.
+  Inspect speed/economy cells, select a complete eight-joint CPG controller, then
+  test it on either course. Optional holdout tests re-score the archive against
+  three unseen parameter worlds. A background worker reports progress and supports
+  cancellation; incomplete searches do not replace the previous archive.
+- **Replays:** save and scrub actual Rust collider poses. Completed trials and
+  trials reset after movement are recorded automatically; the latest three are
+  retained in memory. Viewing a recording never advances the live simulation.
+- **Save / import:** download a versioned workshop JSON with design, active gait,
+  full selected controller and archive. Import validates the whole save before
+  replacing state; imported metrics are labelled as imported. Download recordings
+  separately to keep them beyond the running session.
+
+Rust owns physics, servo limits, fixed ticks, falling, completion and the
+60-second trial limit. The browser renders authoritative collider transforms.
+Pausing stops simulation time. The robot and holdout results remain uncalibrated
+against hardware. Search uses 12 candidates per generation, 120 ticks per world,
+three worlds, seed 0–4294967295 and 1–12 generations. A short search does not
+promise a faster controller or a full archive.
+
+The server is a single-user local tool bound to `127.0.0.1:8790`, with same-origin
+JSON commands and a 256 KiB import limit. State is in memory: export a workshop
+before stopping the process. Holdout results are recomputed, not trusted from an
+import. The existing planar morphology/neural-controller research, checkpoint
+handoffs and `/3d` journal remain available through `bin/axiom gui` and the root
+CLI. Their abstract planar physics is a distinct model, so planar genomes are
+not silently substituted for physical quadruped controllers.
+
+## Development
+
+```sh
+cargo test --workspace --locked
+npm ci
+npm test
+npm run lint
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+The playable game lives in `crates/axiom-field/`: `sim.rs` owns rigid-body physics,
+`controller.rs` defines the eight-joint CPG, `search.rs` runs MAP-Elites,
+`workshop.rs` manages designs and archives, and `lab.rs` serves the local game and
+records trials. Its browser interface is in `crates/axiom-field/web/`.
+The separate `site/` directory is the product website, not the simulation engine.
+See [AGENTS.md](AGENTS.md) for the complete development and verification commands.
+
+## Research tools and benchmark history
+
+The original planar experiments, checkpoint workflows, and Arm64 benchmarks are
+preserved below. Their measurements describe that research engine; they are not
+performance claims for the rigid-body 3D game. [DEMO.md](DEMO.md) walks through
+the earlier research workflow.
+
+<details>
+<summary>Planar research tools, reproducible experiments, and benchmarks</summary>
 
 ## Arm64 optimization
 
@@ -38,7 +129,7 @@ Apple Silicon release usage and the source-build fallback are documented in
 
 ![Axiom Archive Lab showing a live evolved creature and selectable MAP-Elites repertoire](docs/axiom-archive-lab-gen12.jpg)
 
-This rebuild is scoped from the previous Axiom review thread:
+The planar research engine includes:
 
 - morphology genomes with directional attachments
 - compiled neural controllers with explicit bias handling
@@ -49,7 +140,7 @@ This rebuild is scoped from the previous Axiom review thread:
 - MAP-Elites quality-diversity search
 - regression tests for the correctness failures called out in review
 
-## Quick Start
+## Research CLI
 
 The [`bin/axiom`](bin/axiom) CLI wraps every command this repo runs. Put it on
 your PATH once with `bin/axiom link` (symlinks into `~/.local/bin`), then:
@@ -97,7 +188,7 @@ See the judge-readable system map and authority boundaries in
 - `checkpoint.rs` saves complete, versioned experiment state with atomic replacement.
 - `handoff.rs` turns archive diversity into a versioned, downstream-importable creature shortlist.
 
-## Current Scope
+## Planar research interface
 
 The Rust core is complete and covered by regression tests, and a browser surface now sits on top of it: a 2D creature simulator at `/`, a 3D evolved-stride viewer at `/3d` (orbit camera, follow mode, terrain presets, and a selectable MAP-Elites Archive Lab; Three.js r165 is bundled for offline use), and a `/api/replay` endpoint that serves both minimal random genomes and `mode=evolved` replays evolved on demand. Evolved replays now carry the selected genome's real parent lineage and mutation record rather than inferring ancestry from generation aggregates.
 
@@ -152,6 +243,8 @@ The `gui` command starts a local browser interface backed by Rust replay data:
 cargo run -- gui
 open http://127.0.0.1:8787
 ```
+
+</details>
 
 ## License
 

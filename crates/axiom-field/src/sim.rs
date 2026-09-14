@@ -77,6 +77,17 @@ struct Actuator {
     calibration_offset_rad: f32,
 }
 
+/// A renderable collider pose copied directly from the rigid-body world.
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct BodyPose {
+    pub kind: &'static str,
+    pub shape: &'static str,
+    pub size: [f32; 3],
+    pub position: [f32; 3],
+    /// Quaternion in browser / Three.js order: x, y, z, w.
+    pub rotation: [f32; 4],
+}
+
 pub struct FieldSim {
     config: RobotConfig,
     bodies: RigidBodySet,
@@ -271,6 +282,64 @@ impl FieldSim {
             actuators,
             tick: 0,
         }
+    }
+
+    /// Add the test range's low transverse rails as real collision geometry.
+    /// Existing simulation and search callers retain their original flat world.
+    pub fn add_test_rails(&mut self) {
+        for x in [0.3, 0.55, 0.8] {
+            let body = self
+                .bodies
+                .insert(RigidBodyBuilder::fixed().translation(Vec3::new(x, 0.003, 0.0)));
+            self.colliders.insert_with_parent(
+                ColliderBuilder::cuboid(0.012, 0.003, 0.3).friction(self.config.contact.friction),
+                body,
+                &mut self.bodies,
+            );
+        }
+    }
+
+    /// Exact collider geometry and transforms; no inferred gait or cosmetic motion.
+    pub fn body_poses(&self) -> Vec<BodyPose> {
+        self.colliders
+            .iter()
+            .filter_map(|(_, collider)| {
+                let parent = collider.parent()?;
+                let kind = if parent == self.chassis {
+                    "chassis"
+                } else if self.actuators.iter().any(|a| a.child == parent) {
+                    "limb"
+                } else if collider
+                    .shape()
+                    .as_cuboid()
+                    .is_some_and(|b| b.half_extents.x > 1.0)
+                {
+                    "ground"
+                } else {
+                    "obstacle"
+                };
+                let (shape, size) = if let Some(b) = collider.shape().as_cuboid() {
+                    (
+                        "box",
+                        [b.half_extents.x, b.half_extents.y, b.half_extents.z],
+                    )
+                } else if let Some(c) = collider.shape().as_capsule() {
+                    ("capsule", [c.radius, c.half_height(), 0.0])
+                } else {
+                    return None;
+                };
+                let pose = collider.position();
+                let p = pose.translation;
+                let q = pose.rotation;
+                Some(BodyPose {
+                    kind,
+                    shape,
+                    size,
+                    position: [p.x, p.y, p.z],
+                    rotation: [q.x, q.y, q.z, q.w],
+                })
+            })
+            .collect()
     }
 
     pub fn config(&self) -> &RobotConfig {
