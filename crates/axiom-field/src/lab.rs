@@ -8,12 +8,14 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Read, Write},
-    net::{TcpListener, TcpStream},
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream},
     time::Duration,
 };
 
-const ADDRESS: &str = "127.0.0.1:8790";
-const ORIGIN: &str = "http://127.0.0.1:8790";
+/// The port `bin/axiom play` and the README name. When it is held, `serve`
+/// walks forward through `PORT_WINDOW` ports, as the planar GUI does.
+pub const DEFAULT_PORT: u16 = 8790;
+const PORT_WINDOW: u16 = 20;
 const GOAL_M: f32 = 1.0;
 const MAX_TICKS: usize = 1200;
 
@@ -82,6 +84,10 @@ struct Recording {
     frames: Vec<Snapshot>,
 }
 pub struct Lab {
+    /// The bound `host:port`, which every request's Host header must repeat.
+    address: String,
+    /// The browser origin the bound address produces; POSTs must carry it.
+    origin: String,
     sim: FieldSim,
     start_x: f32,
     ticks: usize,
@@ -96,6 +102,13 @@ pub struct Lab {
 }
 impl Lab {
     pub fn new(course: Course) -> Self {
+        Self::bound(
+            course,
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, DEFAULT_PORT)),
+        )
+    }
+    /// A lab whose same-origin guard is keyed to the address it is served on.
+    pub fn bound(course: Course, address: SocketAddr) -> Self {
         let workshop = Workshop::default();
         let mut sim = FieldSim::new(workshop.design.robot().expect("default design"));
         if course == Course::Rails {
@@ -103,6 +116,8 @@ impl Lab {
         }
         let start_x = sim.settle(100).forward_m();
         let mut lab = Self {
+            origin: format!("http://{address}"),
+            address: address.to_string(),
             sim,
             start_x,
             ticks: 0,
@@ -267,11 +282,13 @@ fn route(
     origin: Option<&str>,
     body: &str,
 ) -> Response {
-    // Fail closed against DNS rebinding, cross-origin commands and stray browser forms.
-    if host != ADDRESS {
+    // Fail closed against DNS rebinding, cross-origin commands and stray browser
+    // forms. The guard follows the bound port, so a fallen-forward or `--port`
+    // server accepts its own origin and nobody else's.
+    if host != lab.address {
         return error("403 Forbidden", "Invalid host");
     }
-    if method == "POST" && origin != Some(ORIGIN) {
+    if method == "POST" && origin != Some(lab.origin.as_str()) {
         return error("403 Forbidden", "Same-origin requests required");
     }
     lab.workshop.poll();
@@ -576,21 +593,50 @@ fn write_response(stream: &mut TcpStream, result: Response) -> io::Result<()> {
         result.body
     )
 }
-pub fn serve() -> io::Result<()> {
-    let listener = TcpListener::bind(ADDRESS)?;
-    let mut lab = Lab::new(Course::Flat);
-    println!("Axiom: {ORIGIN} — local, software-only physics. Ctrl-C to stop.");
-    for stream in listener.incoming() {
-        let mut stream = stream?;
-        stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
-        let result = match read_request(&mut stream) {
-            Ok((headers, body)) => dispatch(&mut lab, &headers, &body),
-            Err(_) => error("400 Bad Request", "Invalid or oversized request"),
+/// Bind the preferred port, or the next free one within the window, so a
+/// second `bin/axiom play` or a stale server on 8790 does not stop the game.
+fn bind_first_available(preferred: u16) -> io::Result<TcpListener> {
+    let mut last_error = None;
+    for offset in 0..PORT_WINDOW {
+        let Some(port) = preferred.checked_add(offset) else {
+            break;
         };
-        if let Err(error) = write_response(&mut stream, result) {
-            eprintln!("test range connection: {error}");
+        match TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)) {
+            Ok(listener) => return Ok(listener),
+            Err(error) => last_error = Some(error),
         }
+    }
+    Err(last_error.unwrap_or_else(|| io::Error::other("no bind attempts were made")))
+}
+fn handle(lab: &mut Lab, stream: &mut TcpStream) {
+    let result = stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .and_then(|()| stream.set_write_timeout(Some(Duration::from_secs(2))))
+        .and_then(|()| read_request(stream));
+    let result = match result {
+        Ok((headers, body)) => dispatch(lab, &headers, &body),
+        Err(_) => error("400 Bad Request", "Invalid or oversized request"),
+    };
+    if let Err(error) = write_response(stream, result) {
+        eprintln!("test range connection: {error}");
+    }
+}
+pub fn serve(port: u16) -> io::Result<()> {
+    let listener = bind_first_available(port)?;
+    let address = listener.local_addr()?;
+    let mut lab = Lab::bound(Course::Flat, address);
+    if address.port() != port {
+        println!(
+            "Axiom: port {port} is in use; serving on {} instead.",
+            address.port()
+        );
+    }
+    println!(
+        "Axiom: {} — local, software-only physics. Ctrl-C to stop.",
+        lab.origin
+    );
+    for stream in listener.incoming() {
+        handle(&mut lab, &mut stream?);
     }
     Ok(())
 }
@@ -598,6 +644,8 @@ pub fn serve() -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    const ADDRESS: &str = "127.0.0.1:8790";
+    const ORIGIN: &str = "http://127.0.0.1:8790";
     #[test]
     fn geometry_comes_from_the_physics_world() {
         let mut lab = Lab::new(Course::Flat);
@@ -689,6 +737,75 @@ mod tests {
                 .starts_with("200")
         );
         assert_eq!(lab.ticks, 1);
+    }
+    #[test]
+    fn origin_guard_follows_the_bound_port_rather_than_the_default() {
+        let address: SocketAddr = "127.0.0.1:9123".parse().unwrap();
+        let mut lab = Lab::bound(Course::Flat, address);
+        let body = serde_json::to_string(&GaitInput::default()).unwrap();
+        // The README port is a stranger to a lab served elsewhere.
+        assert!(
+            route(&mut lab, "GET", "/api/state", ADDRESS, None, "")
+                .status
+                .starts_with("403")
+        );
+        assert!(
+            route(
+                &mut lab,
+                "POST",
+                "/api/step",
+                "127.0.0.1:9123",
+                Some(ORIGIN),
+                &body
+            )
+            .status
+            .starts_with("403")
+        );
+        assert_eq!(lab.ticks, 0);
+        assert!(
+            route(
+                &mut lab,
+                "POST",
+                "/api/step",
+                "127.0.0.1:9123",
+                Some("http://127.0.0.1:9123"),
+                &body
+            )
+            .status
+            .starts_with("200")
+        );
+        assert_eq!(lab.ticks, 1);
+    }
+    #[test]
+    fn a_held_port_falls_forward_and_the_served_lab_answers_on_its_own_port() {
+        let held = TcpListener::bind("127.0.0.1:0").unwrap();
+        let preferred = held.local_addr().unwrap().port();
+        let listener = bind_first_available(preferred).expect("a free port within the window");
+        let address = listener.local_addr().unwrap();
+        assert_ne!(address.port(), preferred);
+        assert!(address.port() > preferred && address.port() < preferred + PORT_WINDOW);
+        let mut lab = Lab::bound(Course::Flat, address);
+        let body = serde_json::to_string(&GaitInput::default()).unwrap();
+        let client = std::thread::spawn(move || {
+            let mut stream = TcpStream::connect(address).unwrap();
+            write!(
+                stream,
+                "POST /api/step HTTP/1.1\r\nHost: {address}\r\nOrigin: http://{address}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            )
+            .unwrap();
+            let mut response = String::new();
+            stream.read_to_string(&mut response).unwrap();
+            response
+        });
+        let (mut stream, _) = listener.accept().unwrap();
+        handle(&mut lab, &mut stream);
+        drop(stream);
+        let response = client.join().unwrap();
+        assert!(response.starts_with("HTTP/1.1 200 OK"), "{response}");
+        assert!(response.contains("\"outcome\":\"running\""), "{response}");
+        assert_eq!(lab.ticks, 1, "the browser's own port advances physics");
+        drop(held);
     }
     #[test]
     fn reset_restores_pose_and_validates_before_mutating() {

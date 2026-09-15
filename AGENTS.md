@@ -30,8 +30,10 @@ members with their complete genomes for downstream creature-design workflows.
 bin/axiom play
 ```
 
-Open `http://127.0.0.1:8790` for the interactive 3D workshop. The original planar
-research GUI remains available via `cargo run --locked -- gui` on port 8787.
+Open `http://127.0.0.1:8790` for the interactive 3D workshop; when that port is
+held the game falls forward to the next free port within twenty and prints it,
+and `bin/axiom play --port N` picks one. The original planar research GUI
+remains available via `cargo run --locked -- gui` on port 8787.
 
 ## Commands
 

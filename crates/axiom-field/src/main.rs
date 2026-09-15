@@ -20,13 +20,7 @@ fn main() -> ExitCode {
     let rest = arguments.get(1..).unwrap_or_default();
 
     match command {
-        Some("lab") => match axiom_field::lab::serve() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => {
-                eprintln!("field lab: {error}");
-                ExitCode::FAILURE
-            }
-        },
+        Some("lab") => lab(rest),
         Some("stand") => stand(rest),
         Some("gait") => gait(rest),
         Some("record") => record(rest),
@@ -51,7 +45,9 @@ fn print_help() {
         "axiom-field — rigid-body field lab for a fixed hobby-servo quadruped
 
 USAGE:
-  lab     Open the local playable 3D rigid-body test range on port 8790.
+  lab     [--port <n>]
+          Open the local playable 3D rigid-body test range on port 8790, or
+          the next free port when that one is held; --port picks another.
 
   stand   [--config <robot.toml>] [--ticks <n>]
           Settle the robot from its spawn drop and report the resting pose.
@@ -81,6 +77,41 @@ USAGE:
 All physical parameters live in robot.toml. Calibrating this model against a
 real robot is a diff of that file, never a code change."
     );
+}
+
+fn lab(arguments: &[String]) -> ExitCode {
+    let mut port = axiom_field::lab::DEFAULT_PORT;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].as_str() {
+            "--port" | "-p" => {
+                index += 1;
+                match arguments
+                    .get(index)
+                    .and_then(|value| value.parse::<u16>().ok())
+                {
+                    Some(value) => port = value,
+                    None => {
+                        eprintln!("lab: --port needs a number from 0 to 65535");
+                        return ExitCode::from(2);
+                    }
+                }
+            }
+            other => {
+                eprintln!("unknown lab option: {other}");
+                print_help();
+                return ExitCode::from(2);
+            }
+        }
+        index += 1;
+    }
+    match axiom_field::lab::serve(port) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("field lab: {error}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 fn load(arguments: &[String]) -> Result<RobotConfig, ExitCode> {

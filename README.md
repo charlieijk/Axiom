@@ -21,10 +21,13 @@ bin/axiom play
 ```
 
 Open **http://127.0.0.1:8790** in a browser with WebGL support. The first launch
-builds the game. The equivalent command is:
+builds the game. If that port is already held (a second `bin/axiom play`, a stale
+server), the game takes the next free port within twenty and prints the address
+it actually bound; `bin/axiom play --port 9000` picks one. The equivalent
+command is:
 
 ```sh
-cargo run --release --locked -p axiom-field -- lab
+cargo run --release --locked -p axiom-field -- lab [--port N]
 ```
 
 Start with the reference trot or choose **Evolve → Load bundled archive** to
@@ -62,8 +65,9 @@ against hardware. Search uses 12 candidates per generation, 120 ticks per world,
 three worlds, seed 0–4294967295 and 1–12 generations. A short search does not
 promise a faster controller or a full archive.
 
-The server is a single-user local tool bound to `127.0.0.1:8790`, with same-origin
-JSON commands and a 256 KiB import limit. State is in memory: export a workshop
+The server is a single-user local tool bound to `127.0.0.1:8790` (or the port
+it printed), with same-origin JSON commands keyed to that bound port and a
+256 KiB import limit. State is in memory: export a workshop
 before stopping the process. Holdout results are recomputed, not trusted from an
 import. The existing planar morphology/neural-controller research, checkpoint
 handoffs and `/3d` journal remain available through `bin/axiom gui` and the root

@@ -22,7 +22,8 @@ Axiom CLI
 
 usage: axiom [-r] <command> [args]
 
-  play                        Open the interactive 3D Axiom workshop on port 8790
+  play [--port N]             Open the interactive 3D Axiom workshop on port 8790,
+                              or the next free port when that one is held
 
 Simulation (forwards to the Rust binary; -r builds release first):
   demo                        Compare the three controllers on rough terrain
