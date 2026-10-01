@@ -251,13 +251,14 @@ open http://127.0.0.1:8787
 MIT — see [LICENSE](LICENSE).
 
 <!-- x402-compatibility:start -->
+
 ## x402 integration
 
-| Item | Current documentation |
-| --- | --- |
-| Usage contract | [Research CLI](#research-cli) |
-| Verification | [Build, evolve, and test](#build-evolve-and-test) |
-| License | [LICENSE](LICENSE) |
+| Item                       | Current documentation                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| Usage contract             | [Research CLI](#research-cli)                                                         |
+| Verification               | [Build, evolve, and test](#build-evolve-and-test)                                     |
+| License                    | [LICENSE](LICENSE)                                                                    |
 | x402 payment and discovery | Unverified; no paid endpoint or settled-payment evidence is recorded in this section. |
 
 An existing HTTP or local service interface is a candidate for a separately implemented and tested x402 payment boundary. Preserve its documented inputs, errors, authentication, and limits.
