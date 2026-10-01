@@ -249,3 +249,27 @@ open http://127.0.0.1:8787
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+<!-- x402-compatibility:start -->
+
+## x402 integration
+
+| Item                       | Current documentation                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| Usage contract             | [Research CLI](#research-cli)                                                         |
+| Verification               | [Build, evolve, and test](#build-evolve-and-test)                                     |
+| License                    | [LICENSE](LICENSE)                                                                    |
+| x402 payment and discovery | Unverified; no paid endpoint or settled-payment evidence is recorded in this section. |
+
+An existing HTTP or local service interface is a candidate for a separately implemented and tested x402 payment boundary. Preserve its documented inputs, errors, authentication, and limits.
+
+For a paid-API listing, supply the deployed HTTPS operation, per-call price,
+supported payment network and asset, and accurate input/output schemas and
+examples. Implement and test the `402 Payment Required` challenge and payment
+verification before exposing the operation. Coinbase Bazaar discovery also
+requires discovery metadata, endpoint validation, and a successfully settled
+call through the CDP Facilitator; see its
+[seller guide](https://docs.cdp.coinbase.com/x402/seller/get-discovered).
+Use the GitHub URL as a source reference alongside the service URL and its
+actual availability and access conditions.
+<!-- x402-compatibility:end -->
