@@ -323,10 +323,9 @@ impl FieldSim {
                         "box",
                         [b.half_extents.x, b.half_extents.y, b.half_extents.z],
                     )
-                } else if let Some(c) = collider.shape().as_capsule() {
-                    ("capsule", [c.radius, c.half_height(), 0.0])
                 } else {
-                    return None;
+                    let c = collider.shape().as_capsule()?;
+                    ("capsule", [c.radius, c.half_height(), 0.0])
                 };
                 let pose = collider.position();
                 let p = pose.translation;

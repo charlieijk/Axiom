@@ -32,6 +32,14 @@ explore 43 controllers from the earlier 576-candidate search. The bundled archiv
 restores its original robot and loads its highest-scoring training controller;
 new trials measure how that controller performs in the selected course.
 
+![Axiom's 3D workshop after a completed flat-ground trial](docs/demo/workshop-trial.jpg)
+
+The trial view shows the actual simulated robot, distance, tilt, time and foot
+contacts. Follow the [three-minute workshop demo](DEMO.md#three-minute-workshop-flow)
+to run a trial, inspect a recording and try an archived controller. The screenshots
+are captures of the local application; this is a software simulation prototype
+whose parameters have not been calibrated against hardware.
+
 **Controls:** drag to orbit, scroll to zoom, **Space** to start/pause, and **R**
 to reset. Keyboard shortcuts leave focused form controls alone.
 
@@ -54,6 +62,13 @@ to reset. Keyboard shortcuts leave focused form controls alone.
   full selected controller and archive. Import validates the whole save before
   replacing state; imported metrics are labelled as imported. Download recordings
   separately to keep them beyond the running session.
+
+![Axiom's controller archive loaded from the bundled search](docs/demo/controller-archive.jpg)
+
+The bundled archive supplies an immediately inspectable repertoire. Its stored
+scores describe the earlier search; run a new trial or **Test unseen worlds** for
+a fresh simulation measurement. Holdout tests cover unseen flat-ground parameter
+values, not rails or hardware.
 
 Rust owns physics, servo limits, fixed ticks, falling, completion and the
 60-second trial limit. The browser renders authoritative collider transforms.
@@ -92,7 +107,7 @@ See [AGENTS.md](AGENTS.md) for the complete development and verification command
 The original planar experiments, checkpoint workflows, and Arm64 benchmarks are
 preserved below. Their measurements describe that research engine; they are not
 performance claims for the rigid-body 3D game. [DEMO.md](DEMO.md) walks through
-the earlier research workflow.
+the current workshop and preserves a separate [planar research walkthrough](DEMO.md#planar-research-workflow).
 
 <details>
 <summary>Planar research tools, reproducible experiments, and benchmarks</summary>
