@@ -53,12 +53,14 @@ impl ReplayLimiter {
     }
 
     fn try_acquire(&self) -> Option<ReplayPermit<'_>> {
-        self.active
+        // Keep the Rust 1.85 API; Rust 1.99 renamed this operation to try_update.
+        #[allow(deprecated)]
+        let acquired = self
+            .active
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |active| {
                 (active < self.limit).then_some(active + 1)
-            })
-            .ok()
-            .map(|_| ReplayPermit { limiter: self })
+            });
+        acquired.ok().map(|_| ReplayPermit { limiter: self })
     }
 }
 
